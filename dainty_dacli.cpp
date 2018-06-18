@@ -487,7 +487,7 @@ namespace dacli
         return p;
       }
 
-      p_cstr parse_option(t_err& err, t_option_ref option, p_cstr p) {
+      p_cstr parse_option(t_err& err, t_options_ref option, p_cstr p) {
         if (!err) {
           if (*p == '(') {
             p = strip_space(p+1);
@@ -585,7 +585,7 @@ namespace dacli
         return p;
       }
 
-      p_cstr parse_arg(t_err& err, t_option_ref option, p_cstr p) {
+      p_cstr parse_arg(t_err& err, t_options_ref option, p_cstr p) {
         if (!err) {
           t_name name;
           t_type type;
@@ -914,7 +914,7 @@ namespace dacli
 
       t_void build_option(t_err& err, t_text&       text,
                                       const t_name& name,
-                                      t_option_cref option) {
+                                      t_options_cref option) {
         if (!err) {
           text += option.get_extension();
           text += "(";
@@ -947,7 +947,7 @@ namespace dacli
 
       t_void build_arg(t_err& err, t_text&       text,
                                    t_cref        ref,
-                                   t_option_cref option) {
+                                   t_options_cref option) {
         if (!err) {
           t_type type = ref.get_type();
           if (is_optional(type))
@@ -1357,7 +1357,7 @@ namespace dacli
             } break;
             case TYPE_OZ:
             case TYPE_Z: {
-              t_option_cref option(def_ref);
+              t_options_cref option(def_ref);
               // don't know what to do. - XXX
               // can search through use for all options
               //check in use
@@ -2339,12 +2339,12 @@ namespace dacli
 
 ////////////////////////////////////////////////////////////////////////////////
 
-    t_option_ref::t_option_ref(t_ref ref) : t_collection_ref(ref) {
+    t_options_ref::t_options_ref(t_ref ref) : t_collection_ref(ref) {
       if (is_valid_() && get_base_type() != TYPE_Z)
         clear_();
     }
 
-    t_option_ref::t_option_ref(t_err& err, t_ref ref)
+    t_options_ref::t_options_ref(t_err& err, t_ref ref)
       : t_collection_ref(err, ref) {
       if (!err && get_base_type() != TYPE_Z) {
         clear_();
@@ -2352,13 +2352,13 @@ namespace dacli
       }
     }
 
-    const t_name& t_option_ref::get_extension() const {
+    const t_name& t_options_ref::get_extension() const {
       if (is_valid_())
         return get_().second.info_.ext_;
       return EMPTY_s;
     }
 
-    t_ref t_option_ref::add(t_err& err, p_csyntax p) {
+    t_ref t_options_ref::add(t_err& err, p_csyntax p) {
       if (!err) {
         if (is_valid_()) {
           if (is_empty()) { // looks wrong
@@ -2376,7 +2376,7 @@ namespace dacli
       return {};
     }
 
-    t_ref t_option_ref::add_simple(t_err& err, t_name name) {
+    t_ref t_options_ref::add_simple(t_err& err, t_name name) {
       if (!err) {
         if (is_valid_()) {
           const t_oparams params{false};
@@ -2388,7 +2388,7 @@ namespace dacli
       return {};
     }
 
-    t_ref t_option_ref::add_simple(t_err& err, t_name name, t_value value) {
+    t_ref t_options_ref::add_simple(t_err& err, t_name name, t_value value) {
       if (!err) {
         if (is_valid_()) {
           const t_oparams params{false};
@@ -2400,7 +2400,7 @@ namespace dacli
       return {};
     }
 
-    t_ref t_option_ref::add_boolean(t_err& err, t_name name, t_bool state) {
+    t_ref t_options_ref::add_boolean(t_err& err, t_name name, t_bool state) {
       if (!err) {
         if (is_valid_()) {
           const t_oparams params{false};
@@ -2412,7 +2412,7 @@ namespace dacli
       return {};
     }
 
-    t_ref t_option_ref::add_compound(t_err& err, t_name name,
+    t_ref t_options_ref::add_compound(t_err& err, t_name name,
                                                  t_values values) {
       if (!err) {
         if (is_valid_()) {
@@ -2425,7 +2425,7 @@ namespace dacli
       return {};
     }
 
-    t_ref t_option_ref::add_compound(t_err& err, t_name name,
+    t_ref t_options_ref::add_compound(t_err& err, t_name name,
                                                  t_values values,
                                                  t_value value) {
       if (!err) {
@@ -2440,7 +2440,7 @@ namespace dacli
       return {};
     }
 
-    t_ref t_option_ref::add_array(t_err& err, t_name name, t_bool init,
+    t_ref t_options_ref::add_array(t_err& err, t_name name, t_bool init,
                                               const t_rparams& rparams) {
       if (!err) {
         if (is_valid_()) {
@@ -2453,7 +2453,7 @@ namespace dacli
       return {};
     }
 
-    t_ref t_option_ref::add_array(t_err& err, t_name name, t_values values,
+    t_ref t_options_ref::add_array(t_err& err, t_name name, t_values values,
                                               const t_rparams& rparams) {
       if (!err) {
         if (is_valid_()) {
@@ -2466,7 +2466,7 @@ namespace dacli
       return {};
     }
 
-    t_ref t_option_ref::add_selection(t_err& err, t_name name,
+    t_ref t_options_ref::add_selection(t_err& err, t_name name,
                                                   t_values values) {
       if (!err) {
         if (is_valid_()) {
@@ -2479,7 +2479,7 @@ namespace dacli
       return {};
     }
 
-    t_ref t_option_ref::add_list(t_err& err, t_name name) {
+    t_ref t_options_ref::add_list(t_err& err, t_name name) {
       if (!err) {
         if (is_valid_()) {
           const t_oparams params{false};
@@ -2490,7 +2490,7 @@ namespace dacli
       return {};
     }
 
-    t_ref t_option_ref::add_openlist(t_err& err, t_name name) {
+    t_ref t_options_ref::add_openlist(t_err& err, t_name name) {
       if (!err) {
         if (is_valid_()) {
           const t_oparams params{false};
@@ -2502,7 +2502,7 @@ namespace dacli
       return {};
     }
 
-    t_ref t_option_ref::add_lookup(t_err& err, t_name name,
+    t_ref t_options_ref::add_lookup(t_err& err, t_name name,
                                                const t_rparams& rparams) {
       if (!err) {
         if (is_valid_()) {
@@ -2514,7 +2514,7 @@ namespace dacli
       return {};
     }
 
-    t_bool t_option_ref::del(const t_name& name) {
+    t_bool t_options_ref::del(const t_name& name) {
       if (is_valid_())
         return set_argn_().del_(*this, name);
       return false;
@@ -2522,12 +2522,12 @@ namespace dacli
 
 ////////////////////////////////////////////////////////////////////////////////
 
-    t_option_cref::t_option_cref(t_cref ref) : t_collection_cref(ref) {
+    t_options_cref::t_options_cref(t_cref ref) : t_collection_cref(ref) {
       if (is_valid_() && get_base_type() != TYPE_Z)
         clear_();
     }
 
-    t_option_cref::t_option_cref(t_err& err, t_cref ref)
+    t_options_cref::t_options_cref(t_err& err, t_cref ref)
       : t_collection_cref(err, ref) {
       if (!err && get_base_type() != TYPE_Z) {
         clear_();
@@ -2535,7 +2535,7 @@ namespace dacli
       }
     }
 
-    const t_name& t_option_cref::get_extension() const {
+    const t_name& t_options_cref::get_extension() const {
       if (is_valid_())
         return get_().second.info_.ext_;
       return EMPTY_s;

@@ -581,10 +581,10 @@ namespace dacli
 
 ////////////////////////////////////////////////////////////////////////////////
 
-    class t_option_ref : public t_collection_ref {
+    class t_options_ref : public t_collection_ref {
     public:
-      t_option_ref(t_ref);
-      t_option_ref(t_err&, t_ref);
+      t_options_ref(t_ref);
+      t_options_ref(t_err&, t_ref);
 
       const t_name& get_extension() const; // nothing is allowed to be optional
 
@@ -606,10 +606,10 @@ namespace dacli
       bool del(const t_name&);
     };
 
-    class t_option_cref : public t_collection_cref {
+    class t_options_cref : public t_collection_cref {
     public:
-      t_option_cref(t_cref);
-      t_option_cref(t_err&, t_cref);
+      t_options_cref(t_cref);
+      t_options_cref(t_err&, t_cref);
       const t_name& get_extension() const;
     };
 
@@ -742,8 +742,8 @@ namespace dacli
       friend class t_lookup_cref;
       friend class t_list_ref;
       friend class t_list_cref;
-      friend class t_option_ref;
-      friend class t_option_cref;
+      friend class t_options_ref;
+      friend class t_options_cref;
 
       t_ref  add_simple_   (t_err&, t_ref, t_name&&, const t_oparams&);
       t_ref  add_simple_   (t_err&, t_ref, t_name&&, t_value&&,

@@ -36,7 +36,7 @@ void print_values(t_err& err, t_cref ref) {
         std::cout << "list argument : " << make_long(list.get_fullname()) << std::endl;
       } break;
       case TYPE_Z: {
-        t_option_cref option(ref);
+        t_options_cref option(ref);
         std::cout << "option argument : " << make_long(option.get_fullname()) << std::endl;
       } break;
       case TYPE_K: {
@@ -222,7 +222,7 @@ void example5() {
   t_err err;
   t_argn table(err);
   t_list_ref   cmd_ref(t_list_ref{table.get_root()}.add_list(err, "cmd", t_oparams{true}));
-  t_option_ref cmd_option_ref(cmd_ref.add_option(err, "", t_oparams{true}));
+  t_options_ref cmd_option_ref(cmd_ref.add_option(err, "", t_oparams{true}));
 
   if (err)
     std::cout << err.reason_ << std::endl;
@@ -257,11 +257,11 @@ t_value make_flat(const t_fullname& fullname) {
 void example5_1() {
   t_err err;
   t_argn table(err);
-  t_list_ref   cmd_ref = table.get_root().add_list(err, {"cmd"}, optional);
-  t_option_ref cmd_option_ref = cmd_ref.add(err, "([list]=(in_args(*),out_args=(*))|"
-                                                 " [config]=(in_args(*),out_args=(*))|"
-                                                 " [help]=(in_args(*),out_args=(*))|"
-                                                 " [test]=(in_args=(*),out_args=(*)))");
+  t_list_ref    cmd_ref = table.get_root().add_list(err, {"cmd"}, optional);
+  t_options_ref cmd_option_ref{cmd_ref.add(err, "([list]=(in_args(*),out_args=(*))|"
+                                                " [config]=(in_args(*),out_args=(*))|"
+                                                " [help]=(in_args(*),out_args=(*))|"
+                                                " [test]=(in_args=(*),out_args=(*)))")};
   table.print();
 
   if (err)
