@@ -55,15 +55,15 @@ namespace dacli
 {
 ////////////////////////////////////////////////////////////////////////////////
 
-  t_err& t_err::set(p_cstr p, std::string&& reason) {
+  t_err& t_err::set(p_cstr_ p, p_cstr reason) {
     position_ = p;
-    reason_   = std::move(reason);
+    reason_   = get(reason);
     return *this;
   }
 
-  t_err& t_err::set(std::string&& reason) {
+  t_err& t_err::set(p_cstr reason) {
     position_ = nullptr;
-    reason_   = std::move(reason);
+    reason_   = get(reason);
     return *this;
   }
 
@@ -80,25 +80,27 @@ namespace dacli
 
   namespace syntax
   {
+    using named::p_cstr_;
+
     namespace parse
     {
       template<typename P>
-      p_cstr parse_args(t_err&, P, const char delimit, p_cstr);
+      p_cstr_ parse_args(t_err&, P, const char delimit, p_cstr_);
 
-      inline p_cstr strip_space(p_cstr p) {
+      inline p_cstr_ strip_space(p_cstr_ p) {
         for (; *p == ' '; ++p);
         return p;
       }
 
       template<char C>
-      inline p_cstr find(p_cstr p) {
+      inline p_cstr_ find(p_cstr_ p) {
         for (auto b = p; *p; ++p)
           if (*p == C && (b == p || p[-1] != '/'))
             break;
         return p;
       }
 
-      inline p_cstr find_end_of_word(p_cstr p) {
+      inline p_cstr_ find_end_of_word(p_cstr_ p) {
         for (; *p && *p != ',' && *p != '=' && *p != '(' && *p != ')' &&
                *p != (':') && *p != '[' && *p != ']' && *p != ' ' &&
                *p != '|' && *p != '@' && *p != '{' && *p != '}' && *p != '>' &&
@@ -106,16 +108,16 @@ namespace dacli
         return p;
       }
 
-      p_cstr parse_word(t_err& err, t_word& word, p_cstr p) {
+      p_cstr_ parse_word(t_err& err, t_word& word, p_cstr_ p) {
         if (!err) {
-          p_cstr b   = p;
-          p_cstr end = 0;
+          p_cstr_ b   = p;
+          p_cstr_ end = 0;
           if (*b == '<') {
             end = find<'>'>(++b);
             if (*end == '>')
               p = end + 1;
             else
-              err.set(p, "parse error: missing '>'");
+              err.set(p, mk_cstr("parse error: missing '>'"));
           } else
             p = end = find_end_of_word(b);
           if (!err && end - b) {
@@ -128,13 +130,13 @@ namespace dacli
         return p;
       }
 
-      t_n to_num(p_cstr start, named::t_uint num) {
+      t_n to_num(p_cstr_ start, named::t_uint num) {
         std::string tmp;
         tmp.assign(start, num);
         return t_n(std::stoul(tmp)); // will narrow
       }
 
-      p_cstr parse_bound(t_err& err, t_rparams& params, p_cstr p) {
+      p_cstr_ parse_bound(t_err& err, t_rparams& params, p_cstr_ p) {
         if (!err) {
           if (*p == '@') {
             p = strip_space(p+1);
@@ -145,7 +147,7 @@ namespace dacli
               t_n min = 0_n, max = 0_n;
               t_bool stop = false, is_range = false;
               while (!err && !stop) {
-                p_cstr b = p;
+                p_cstr_ b = p;
                 for (; *p >= 48 && *p <= 57; ++p);
                 switch (*p) {
                   case '-':
@@ -156,7 +158,7 @@ namespace dacli
                       stop = true;
                       p = strip_space(p+1);
                       if (*p != '=' && *p != '{')
-                        err.set(p, "parse error");
+                        err.set(p, mk_cstr("parse error"));
                     }
                     break;
                   case '=':
@@ -164,11 +166,11 @@ namespace dacli
                     if (p - b)
                        max = to_num(b, p - b);
                     else
-                      err.set(p, "parse error");
+                      err.set(p, mk_cstr("parse error"));
                     stop = true;
                     break;
                   default:
-                    err.set(p, "parse error");
+                    err.set(p, mk_cstr("parse error"));
                     break;
                 }
               }
@@ -176,15 +178,15 @@ namespace dacli
               params.range_min_ = is_range ? min : max;
             }
           } else
-            err.set("internal logic");
+            err.set(mk_cstr("internal logic"));
         }
         return p;
       }
 
-      p_cstr parse_name(t_err& err, t_name&   name,
+      p_cstr_ parse_name(t_err& err, t_name&   name,
                                     t_type&   type,
                                     t_params& params,
-                                    p_cstr    p) {
+                                    p_cstr_    p) {
         if (!err) {
           t_bool modify = false;
           if (*p == '!') {
@@ -201,7 +203,7 @@ namespace dacli
           if (!err) {
             switch (*p) {
               case '=': {
-                p_cstr b = strip_space(p+1);
+                p_cstr_ b = strip_space(p+1);
                 switch (*b) {
                   case '(': {
                     if (b[1] == '*' && b[2] == ')') {
@@ -239,7 +241,7 @@ namespace dacli
                 type = params.optional_ ? TYPE_OB : (modify ? TYPE_MB : TYPE_B);
               } break;
               case '@': {
-                p_cstr b = p;
+                p_cstr_ b = p;
                 p = parse_bound(err, params, b);
                 if (!err) {
                   switch (*p) {
@@ -249,36 +251,36 @@ namespace dacli
                     case '{': type = params.optional_ ? TYPE_OX : TYPE_X;
                       break;
                     default:
-                      err.set(p, "parse error");
+                      err.set(p, mk_cstr("parse error"));
                     break;
                   }
                 }
               } break;
               default:
-                err.set(p, "parse error");
+                err.set(p, mk_cstr("parse error"));
                 break;
             }
             if (!err) {
               if (!modify || (type == TYPE_MB))
                 name = std::move(word);
               else
-                err.set(p, "parse error");
+                err.set(p, mk_cstr("parse error"));
             }
           }
         }
         return p;
       }
 
-      p_cstr parse_simple_value(t_err& err, t_value& value, p_cstr p) {
+      p_cstr_ parse_simple_value(t_err& err, t_value& value, p_cstr_ p) {
         if (!err)
           p = parse_word(err, value, p);
         return p;
       }
 
-      p_cstr parse_array_values(t_err& err, t_values&        values,
+      p_cstr_ parse_array_values(t_err& err, t_values&        values,
                                             t_bool&          init,
                                             const t_rparams& params,
-                                            p_cstr           p) {
+                                            p_cstr_          p) {
         if (!err) {
           if (*p == '[') {
             p = strip_space(p+1);
@@ -300,9 +302,9 @@ namespace dacli
               if (!err) {
                 if (*p == ']') {
                   if (cnt < get(params.range_min_))
-                    err.set("range error");
+                    err.set(mk_cstr("range error"));
                 } else
-                  err.set(p, "parse error");
+                  err.set(p, mk_cstr("parse error"));
               }
             } else
               init = true;
@@ -313,7 +315,7 @@ namespace dacli
         return p;
       }
 
-      p_cstr parse_selection_values(t_err& err, t_values& values, p_cstr p) {
+      p_cstr_ parse_selection_values(t_err& err, t_values& values, p_cstr_ p) {
         if (!err) {
           t_n::t_value cnt = 0;
           if (*p == '[') {
@@ -330,12 +332,12 @@ namespace dacli
                     if (word.length()) {
                       for (auto&& i : values) {
                         if (word == i) {
-                          err.set(p, "same selection");
+                          err.set(p, mk_cstr("same selection"));
                           break;
                         }
                       }
                     } else
-                      err.set(p, "parse error");
+                      err.set(p, mk_cstr("parse error"));
                     if (!err) {
                       ++cnt;
                       values.push_back(std::move(word));
@@ -343,20 +345,20 @@ namespace dacli
                   }
                 }
               } else
-                err.set(p, "no name");
+                err.set(p, mk_cstr("no name"));
             }
           }
           if (*p == ']')
             p = strip_space(p+1);
           else
-            err.set(p, "parse error");
+            err.set(p, mk_cstr("parse error"));
         }
         return p;
       }
 
-      p_cstr parse_compound_values(t_err& err, t_values& values,
+      p_cstr_ parse_compound_values(t_err& err, t_values& values,
                                                t_value&  value,
-                                               p_cstr    p) {
+                                               p_cstr_    p) {
         if (!err) {
           t_word word;
           p = parse_word(err, word, p);
@@ -372,7 +374,7 @@ namespace dacli
                   part.swap(word);
                   values.push_back(std::move(part));
                 } else
-                  err.set(p, "empty part value");
+                  err.set(p, mk_cstr("empty part value"));
               }
             }
           }
@@ -380,7 +382,7 @@ namespace dacli
         return p;
       }
 
-      p_cstr parse_lookup_values(t_err& err, t_lookup_ref lookup, p_cstr p) {
+      p_cstr_ parse_lookup_values(t_err& err, t_lookup_ref lookup, p_cstr_ p) {
         if (!err) {
           if (*p == '[') {
             p = strip_space(p+1);
@@ -419,9 +421,9 @@ namespace dacli
                                                 + 1))
                                   bool_ref.set_value(err, state);
                                 else
-                                  err.set("name does not match");
+                                  err.set(mk_cstr("name does not match"));
                               } else
-                                err.set("boolean name not given");
+                                err.set(mk_cstr("boolean name not given"));
                             } break;
                             case TYPE_H: {
                               t_selection_ref selection_ref(ref);
@@ -448,7 +450,7 @@ namespace dacli
                               p = parse_lookup_values(err, lookup_ref, p);
                             } break;
                             default:
-                              err.set(p, "invalid argument");
+                              err.set(p, mk_cstr("invalid argument"));
                               break;
                           }
 
@@ -456,7 +458,7 @@ namespace dacli
                             if (*p == ',')
                               p = strip_space(p+1);
                             else
-                              err.set("parse error");
+                              err.set(mk_cstr("parse error"));
                           }
                         }
                       }
@@ -467,27 +469,27 @@ namespace dacli
                         else
                           break;
                       } else
-                        err.set("parse error");
+                        err.set(mk_cstr("parse error"));
                     }
                   } else
-                    err.set("parse error");
+                    err.set(mk_cstr("parse error"));
                 }
               } while(!err);
               if (*p == ']')
                 p = strip_space(p+1);
               else
-                err.set("parse error");
+                err.set(mk_cstr("parse error"));
             } else {
               lookup.set_as_initialized();
               p = strip_space(p+1);
             }
           } else
-            err.set("parse error");
+            err.set(mk_cstr("parse error"));
         }
         return p;
       }
 
-      p_cstr parse_lookup(t_err& err, t_lookup_ref lookup, p_cstr p) {
+      p_cstr_ parse_lookup(t_err& err, t_lookup_ref lookup, p_cstr_ p) {
         if (!err) {
           if (*p == '{') {
             p = strip_space(p+1);
@@ -501,37 +503,37 @@ namespace dacli
                     if (*p == '[')
                       p = parse_lookup_values(err, lookup, p);
                   } else
-                    err.set(p, "parse error");
+                    err.set(p, mk_cstr("parse error"));
                 } else
-                  err.set(p, "parse error");
+                  err.set(p, mk_cstr("parse error"));
               }
             } else
-              err.set(p, "lookup may not be empty");
+              err.set(p, mk_cstr("lookup may not be empty"));
           } else
-            err.set(p, "parse error");
+            err.set(p, mk_cstr("parse error"));
         }
         return p;
       }
 
-      p_cstr parse_option(t_err& err, t_options_ref option, p_cstr p) {
+      p_cstr_ parse_option(t_err& err, t_options_ref option, p_cstr_ p) {
         if (!err) {
           if (*p == '(') {
             p = strip_space(p+1);
             if (*p != ')')
               p = parse_args(err, option, '|', p);
             else
-              err.set(p, "option may not be empty");
+              err.set(p, mk_cstr("option may not be empty"));
             if (*p == ')')
                p = strip_space(p+1);
             else if (!err)
-              err.set(p, "parse error");
+              err.set(p, mk_cstr("parse error"));
           } else
-            err.set(p, "parse error");
+            err.set(p, mk_cstr("parse error"));
         }
         return p;
       }
 
-      p_cstr parse_list(t_err& err, t_list_ref list, p_cstr p) {
+      p_cstr_ parse_list(t_err& err, t_list_ref list, p_cstr_ p) {
         if (!err) {
           if (*p == '(') {
             p = strip_space(p+1);
@@ -540,14 +542,14 @@ namespace dacli
             if (*p == ')')
                p = strip_space(p+1);
             else if (!err)
-              err.set(p, "parse error");
+              err.set(p, mk_cstr("parse error"));
           } else
-            err.set(p, "parse error");
+            err.set(p, mk_cstr("parse error"));
         }
         return p;
       }
 
-      p_cstr parse_arg(t_err& err, t_list_ref list, p_cstr p) {
+      p_cstr_ parse_arg(t_err& err, t_list_ref list, p_cstr_ p) {
         if (!err) {
           t_name   name;
           t_type   type;
@@ -603,7 +605,7 @@ namespace dacli
                 p = parse_lookup(err, list.add_lookup(err, name, params), p);
               } break;
               default:
-                err.set(p, "invalid argument");
+                err.set(p, mk_cstr("invalid argument"));
                 break;
             }
           }
@@ -611,7 +613,7 @@ namespace dacli
         return p;
       }
 
-      p_cstr parse_arg(t_err& err, t_options_ref option, p_cstr p) {
+      p_cstr_ parse_arg(t_err& err, t_options_ref option, p_cstr_ p) {
         if (!err) {
           t_name name;
           t_type type;
@@ -666,17 +668,17 @@ namespace dacli
                   p = parse_lookup(err, option.add_lookup(err, name, params), p);
                 } break;
                 default:
-                  err.set(p, "invalid argument");
+                  err.set(p, mk_cstr("invalid argument"));
                   break;
               }
             } else
-              err.set("not allowed to be optional");
+              err.set(mk_cstr("not allowed to be optional"));
           }
         }
         return p;
       }
 
-      p_cstr parse_arg(t_err& err, t_lookup_ref lookup, p_cstr p) {
+      p_cstr_ parse_arg(t_err& err, t_lookup_ref lookup, p_cstr_ p) {
         if (!err) {
           t_name name;
           t_type type;
@@ -691,7 +693,7 @@ namespace dacli
                   if (value.empty())
                     lookup.add_simple(err, name);
                   else
-                    err.set("must be empty");
+                    err.set(mk_cstr("must be empty"));
                 } break;
                 case TYPE_MB:
                   lookup.add_boolean(err, name);
@@ -708,7 +710,7 @@ namespace dacli
                   if (value.empty())
                     lookup.add_compound(err, name, values);
                   else
-                    err.set("may not have a value");
+                    err.set(mk_cstr("may not have a value"));
                 } break;
                 case TYPE_A:{
                   t_values values;
@@ -718,25 +720,25 @@ namespace dacli
                     if (!init && values.empty())
                       lookup.add_lookup(err, name, params);
                     else
-                      err.set("no values allowed");
+                      err.set(mk_cstr("no values allowed"));
                   }
                 } break;
                 case TYPE_X: {
                   p = parse_lookup(err, lookup.add_lookup(err, name, params), p);
                 } break;
                 default:
-                  err.set(p, "invalid argument");
+                  err.set(p, mk_cstr("invalid argument"));
                   break;
               }
             } else
-              err.set("not allowed to be optional");
+              err.set(mk_cstr("not allowed to be optional"));
           }
         }
         return p;
       }
 
       template<typename P>
-      p_cstr parse_args(t_err& err, P parent, const char delimit, p_cstr p) {
+      p_cstr_ parse_args(t_err& err, P parent, const char delimit, p_cstr_ p) {
         if (!err) {
           for (; *p && !err; p = strip_space(p+1)) {
             p = parse_arg(err, parent, p);
@@ -882,7 +884,7 @@ namespace dacli
                       build_lookup_values(err, text, arg);
                     } break;
                     default: {
-                      err.set("unexpected type");
+                      err.set(mk_cstr("unexpected type"));
                     } break;
                   }
                   if (!err) {
@@ -1013,7 +1015,7 @@ namespace dacli
               build_lookup(err, text, name, ref);
               break;
             default:
-              err.set("unknown argument");
+              err.set(mk_cstr("unknown argument"));
               break;
           }
         }
@@ -1045,7 +1047,7 @@ namespace dacli
               build_lookup(err, text, name, ref);
               break;
             default:
-              err.set("unknown argument");
+              err.set(mk_cstr("unknown argument"));
               break;
           }
         }
@@ -1086,7 +1088,7 @@ namespace dacli
               build_lookup(err, text, name, ref);
               break;
             default:
-              err.set("unknown argument");
+              err.set(mk_cstr("unknown argument"));
               break;
           }
         }
@@ -1123,30 +1125,30 @@ namespace dacli
               case TYPE_S: {
                 t_simple_cref simple(use_ref);
                 if (simple.get_value().empty())
-                  err.set("use simple not allowed to be empty");
+                  err.set(mk_cstr("use simple not allowed to be empty"));
               } break;
               case TYPE_C: {
                 t_compound_cref compound(use_ref);
                 if (compound.get_value().empty())
-                  err.set("use compound not allowed to be empty");
+                  err.set(mk_cstr("use compound not allowed to be empty"));
               } break;
               case TYPE_A: {
                 t_array_cref array(use_ref);
                 if (array.get_values().empty())
-                  err.set("use array not allowed to be empty");
+                  err.set(mk_cstr("use array not allowed to be empty"));
               } break;
               case TYPE_X: {
                 t_lookup_cref lookup(use_ref);
                 if (!get(lookup.size_value()) && !lookup.is_initialized()) /// XXX - empty
-                  err.set("use lookup not allowed to be undefined");
+                  err.set(mk_cstr("use lookup not allowed to be undefined"));
               } break;
               default: {
-                err.set("unexpected");
+                err.set(mk_cstr("unexpected"));
                 break;
               }
             }
           } else
-            err.set("wrong use argument");
+            err.set(mk_cstr("wrong use argument"));
         }
         return !err;
       }
@@ -1174,7 +1176,7 @@ namespace dacli
           }
           if (!err && get_path_type(use_ref.get_type()) !=
                       get_path_type(def_ref.get_type()))
-            err.set("imcompatible types");
+            err.set(mk_cstr("imcompatible types"));
         }
         return !err;
       }
@@ -1251,12 +1253,12 @@ namespace dacli
                 }
               } break;
               default: {
-                err.set("unexpected");
+                err.set(mk_cstr("unexpected"));
                 break;
               }
             }
           } else
-            err.set("argument is missing");
+            err.set(mk_cstr("argument is missing"));
         }
         return !err;
       }
@@ -1283,7 +1285,7 @@ namespace dacli
                       insert_default_use(err, use, use_ix, def, def_ref);
                       use_max = get(use.get_size());
                       if (use_max > def_max)
-                        err.set("undefined arguments in use");
+                        err.set(mk_cstr("undefined arguments in use"));
                     }
                   }
                 } while (!err && ++ix < use_max);
@@ -1293,7 +1295,7 @@ namespace dacli
                       insert_default_use(err, use, use_ix, def, def[t_ix{ix}]);
                   }
                 } else if (!err)
-                  err.set("contain unknown argument");
+                  err.set(mk_cstr("contain unknown argument"));
               } else {
                 decltype(use_max) use_ix = 0;
                 for (decltype(def_max) ix = 0; !err && ix < def_max; ++ix)
@@ -1301,7 +1303,7 @@ namespace dacli
               }
             }
           } else
-            err.set("use have more extries than def");
+            err.set(mk_cstr("use have more extries than def"));
         }
         return !err;
       }
@@ -1320,7 +1322,7 @@ namespace dacli
             case TYPE_B: {
               t_boolean_cref boolean(use_ref);
               if (!boolean.get_value())
-                err.set("invalid boolean value");
+                err.set(mk_cstr("invalid boolean value"));
             } break;
             case TYPE_OS:
             case TYPE_S: {
@@ -1328,7 +1330,7 @@ namespace dacli
               if (!is_optional(def_type) &&
                   !def_simple.get_value().empty() &&
                    def_simple.get_value() != use_simple.get_value())
-                err.set("simple mandatory value does not match");
+                err.set(mk_cstr("simple mandatory value does not match"));
             } break;
             case TYPE_OC:
             case TYPE_C: {
@@ -1343,7 +1345,7 @@ namespace dacli
                   use_simple.transform_to(err, use_compound,
                                           def_compound.get_part_values());
                 } else
-                  err.set("compound mandatory value does not match");
+                  err.set(mk_cstr("compound mandatory value does not match"));
               } else {
                 t_compound_ref use_compound(use_ref);
                 if (!mandatory || use_compound.get_value() ==
@@ -1352,7 +1354,7 @@ namespace dacli
                                                        def_compound.
                                                          get_part_values());
                 else
-                  err.set("compound mandatory value does not match");
+                  err.set(mk_cstr("compound mandatory value does not match"));
               }
             } break;
             case TYPE_H:
@@ -1361,9 +1363,9 @@ namespace dacli
               t_simple_cref simple_ref(use_ref);
               if (simple_ref) {
                 if (!selection_ref.test_value(err, simple_ref.get_value()))
-                  err.set("value not in selection");
+                  err.set(mk_cstr("value not in selection"));
               } else
-                err.set("unexpected type for selection value");
+                err.set(mk_cstr("unexpected type for selection value"));
             } break;
             case TYPE_OA:
             case TYPE_A: {
@@ -1373,9 +1375,9 @@ namespace dacli
                 if (!is_optional(def_type) &&
                     !def_array.get_values().empty() &&
                      def_array.get_values() != use_array.get_values())
-                  err.set("array mandatory value does not match");
+                  err.set(mk_cstr("array mandatory value does not match"));
               } else
-                err.set("array bounds don't match !");
+                err.set(mk_cstr("array bounds don't match !"));
             } break;
             case TYPE_OL:
             case TYPE_L: {
@@ -1395,12 +1397,12 @@ namespace dacli
               if (is_same_definition(def_lookup, use_lookup, true)) {
                 if (!is_optional(def_type) &&
                     !is_same(def_lookup, use_lookup))
-                  err.set("values don't match");
+                  err.set(mk_cstr("values don't match"));
               } else
-                err.set("not the same definition");
+                err.set(mk_cstr("not the same definition"));
             } break;
             default: {
-              err.set("unexpected");
+              err.set(mk_cstr("unexpected"));
               break;
             }
           }
@@ -1420,11 +1422,11 @@ namespace dacli
             word.insert(word.begin(), '<');
             word.push_back('>');
           } else if (word.back() != '>')
-            err.set("bad word");
+            err.set(mk_cstr("bad word"));
           if (!err)
             return false;
         } else
-          err.set("is empty");
+          err.set(mk_cstr("is empty"));
       }
       return true;
     }
@@ -1456,7 +1458,7 @@ namespace dacli
           }
           return true;
         } else
-          err.set("values not allwed to be empty");
+          err.set(mk_cstr("values not allwed to be empty"));
       }
       return false;
     }
@@ -1490,7 +1492,7 @@ namespace dacli
     t_bool check_range(t_err& err, const t_rparams& params) {
       if (get(params.range_max_) &&
          (get(params.range_max_) < get(params.range_min_)))
-        err.set("range error");
+        err.set(mk_cstr("range error"));
       return true;
     }
 
@@ -1500,16 +1502,16 @@ namespace dacli
           if (!get(params.range_max_) || (get(size) <= get(params.range_max_)))
             return true;
           else
-            err.set("range error");
+            err.set(mk_cstr("range error"));
         } else
-          err.set("range error");
+          err.set(mk_cstr("range error"));
       }
       return false;
     }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-   t_void print(p_cstr prefix, const t_words& words) {
+   t_void print(p_cstr_ prefix, const t_words& words) {
       std::string str("[");
       auto max = words.size();
       for (decltype(max) i = 0; i < max; ++i) {
@@ -1573,7 +1575,7 @@ namespace dacli
       if (err)
         clear_();
       else if (!is_valid_())
-        err.set("ref is invalid");
+        err.set(mk_cstr("ref is invalid"));
     }
 
     t_type t_ref::get_type() const {
@@ -1613,7 +1615,7 @@ namespace dacli
       if (err)
         clear_();
       else if (!is_valid_())
-        err.set("cref is invalid");
+        err.set(mk_cstr("cref is invalid"));
     }
 
     t_type t_cref::get_type() const {
@@ -1656,7 +1658,7 @@ namespace dacli
     t_simple_ref::t_simple_ref(t_err& err, t_ref ref) : t_ref(err, ref) {
       if (!err && get_base_type() != TYPE_S) {
         clear_();
-        err.set("id is not a simple argument");
+        err.set(mk_cstr("id is not a simple argument"));
       }
     }
 
@@ -1666,7 +1668,7 @@ namespace dacli
         if (is_valid_())
           compound = set_argn_().transform_(err, *this, std::move(values));
         else
-          err.set("invalid reference");
+          err.set(mk_cstr("invalid reference"));
       }
       return !err;
     }
@@ -1687,7 +1689,7 @@ namespace dacli
           else
             set_().second.values_[0] = std::move(value);
         } else
-          err.set("invalid reference");
+          err.set(mk_cstr("invalid reference"));
       }
       return !err;
     }
@@ -1703,7 +1705,7 @@ namespace dacli
       : t_cref(err, ref) {
       if (!err && get_base_type() != TYPE_S) {
         clear_();
-        err.set("id is not a simple argument");
+        err.set(mk_cstr("id is not a simple argument"));
       }
     }
 
@@ -1725,7 +1727,7 @@ namespace dacli
     t_boolean_ref::t_boolean_ref(t_err& err, t_ref ref) : t_ref(err, ref) {
       if (!err && get_base_type() != TYPE_MB) {
         clear_();
-        err.set("id is not a boolean argument");
+        err.set(mk_cstr("id is not a boolean argument"));
       }
     }
 
@@ -1741,9 +1743,9 @@ namespace dacli
          if (state || get_type() == TYPE_MB)
            set_().second.values_[0] = state ? TRUE_s : FALSE_s;
          else
-           err.set("boolean value doesn't match type");
+           err.set(mk_cstr("boolean value doesn't match type"));
         } else
-          err.set("invalid reference");
+          err.set(mk_cstr("invalid reference"));
       }
       return !err;
     }
@@ -1759,7 +1761,7 @@ namespace dacli
       : t_cref(err, ref) {
       if (!err && get_base_type() != TYPE_MB) {
         clear_();
-        err.set("id is not a boolean argument");
+        err.set(mk_cstr("id is not a boolean argument"));
       }
     }
 
@@ -1779,7 +1781,7 @@ namespace dacli
     t_array_ref::t_array_ref(t_err& err, t_ref ref) : t_ref(err, ref) {
       if (!err && get_base_type() != TYPE_A) {
         clear_();
-        err.set("id is not an array argument");
+        err.set(mk_cstr("id is not an array argument"));
       }
     }
 
@@ -1817,7 +1819,7 @@ namespace dacli
         if (is_valid_())
           set_().second.values_ = std::move(values);
         else
-          err.set("invalid reference");
+          err.set(mk_cstr("invalid reference"));
       }
       return !err;
     }
@@ -1832,7 +1834,7 @@ namespace dacli
     t_array_cref::t_array_cref(t_err& err, t_cref ref) : t_cref(err, ref) {
       if (!err && get_base_type() != TYPE_A) {
         clear_();
-        err.set("id is not an array argument");
+        err.set(mk_cstr("id is not an array argument"));
       }
     }
 
@@ -1865,7 +1867,7 @@ namespace dacli
     t_compound_ref::t_compound_ref(t_err& err, t_ref ref) : t_ref(err, ref) {
       if (!err && get_base_type() != TYPE_C) {
         clear_();
-        err.set("id is not a compound argument");
+        err.set(mk_cstr("id is not a compound argument"));
       }
     }
 
@@ -1879,9 +1881,9 @@ namespace dacli
             for (auto ix = max; ix < nmax; ++ix)
               set_().second.values_.push_back(values[ix]);
           } else if (nmax < max)
-            err.set("invalid number of parats");
+            err.set(mk_cstr("invalid number of parts"));
         } else
-          err.set("invalid reference");
+          err.set(mk_cstr("invalid reference"));
       }
       return false;
     }
@@ -1903,7 +1905,7 @@ namespace dacli
         if (is_valid_())
           set_().second.info_.ext_ = std::move(value);
         else
-          err.set("invalid reference");
+          err.set(mk_cstr("invalid reference"));
       }
       return !err;
     }
@@ -1918,7 +1920,7 @@ namespace dacli
     t_compound_cref::t_compound_cref(t_err& err, t_cref ref) : t_cref(err, ref) {
       if (!err && get_base_type() != TYPE_C) {
         clear_();
-        err.set("id is not a compound argument");
+        err.set(mk_cstr("id is not a compound argument"));
       }
     }
 
@@ -1944,7 +1946,7 @@ namespace dacli
     t_selection_ref::t_selection_ref(t_err& err, t_ref ref) : t_ref(err, ref) {
       if (!err && get_base_type() != TYPE_H) {
         clear_();
-        err.set("id is not a selection argument");
+        err.set(mk_cstr("id is not a selection argument"));
       }
     }
 
@@ -1965,7 +1967,7 @@ namespace dacli
         if (check_selection_value(err, value, get_().second.values_))
           set_().second.info_.ext_ = std::move(value);
       } else if (!err)
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       return !err;
     }
 
@@ -1976,7 +1978,7 @@ namespace dacli
                            std::cend(get_().second.values_), value) !=
                  std::cend(get_().second.values_);
         else
-          err.set("invalid reference");
+          err.set(mk_cstr("invalid reference"));
       }
       return !err;
     }
@@ -1991,7 +1993,7 @@ namespace dacli
     t_selection_cref::t_selection_cref(t_err& err, t_cref ref) : t_cref(err, ref) {
       if (!err && get_base_type() != TYPE_H) {
         clear_();
-        err.set("id is not a selection argument");
+        err.set(mk_cstr("id is not a selection argument"));
       }
     }
 
@@ -2014,7 +2016,7 @@ namespace dacli
                            std::cend(get_().second.values_), value) !=
                  std::cend(get_().second.values_);
         else
-          err.set("invalid reference");
+          err.set(mk_cstr("invalid reference"));
       }
       return !err;
     }
@@ -2029,7 +2031,7 @@ namespace dacli
     t_openlist_ref::t_openlist_ref(t_err& err, t_ref ref) : t_ref(err, ref) {
       if (!err && get_base_type() != TYPE_K) {
         clear_();
-        err.set("id is not a openlist argument");
+        err.set(mk_cstr("id is not a openlist argument"));
       }
     }
 
@@ -2043,7 +2045,7 @@ namespace dacli
     t_openlist_cref::t_openlist_cref(t_err& err, t_cref ref) : t_cref(err, ref) {
       if (!err && get_base_type() != TYPE_K) {
         clear_();
-        err.set("id is not a openlist argument");
+        err.set(mk_cstr("id is not a openlist argument"));
       }
     }
 
@@ -2062,7 +2064,7 @@ namespace dacli
         const t_type base = get_base_type();
         if (base != TYPE_L && base != TYPE_X && base != TYPE_Z && base != TYPE_XI) {
           clear_();
-          err.set("not a collection argument");
+          err.set(mk_cstr("not a collection argument"));
         }
       }
     }
@@ -2073,30 +2075,30 @@ namespace dacli
       return {};
     }
 
-    t_ref t_collection_ref::find_member(p_cstr name) {
-      if (is_valid_()) {
-        auto max = get_().second.info_.mem_.size();
-        for (decltype(max) ix = 0; ix < max; ++ix) {
-          p_arg arg = (p_arg)set_().second.info_.mem_[ix];
-          if (!std::strcmp(arg->first.back().c_str(), name))
-            return make_ref_(arg);
-        }
-      }
-      return {};
-    }
-
     t_cref t_collection_ref::operator[](t_ix ix) const {
       if (is_valid_())
         return make_id_((p_carg)get_().second.info_.mem_[get(ix)]);
       return {};
     }
 
-    t_cref t_collection_ref::find_member(p_cstr name) const {
+    t_ref t_collection_ref::operator[](p_cstr name) {
+      if (is_valid_()) {
+        auto max = get_().second.info_.mem_.size();
+        for (decltype(max) ix = 0; ix < max; ++ix) {
+          p_arg arg = (p_arg)set_().second.info_.mem_[ix];
+          if (!std::strcmp(arg->first.back().c_str(), get(name)))
+            return make_ref_(arg);
+        }
+      }
+      return {};
+    }
+
+    t_cref t_collection_ref::operator[](p_cstr name) const {
       if (is_valid_()) {
         auto max = get_().second.info_.mem_.size();
         for (decltype(max) ix = 0; ix < max; ++ix) {
           p_carg arg = (p_carg)get_().second.info_.mem_[ix];
-          if (!std::strcmp(arg->first.back().c_str(), name))
+          if (!std::strcmp(arg->first.back().c_str(), get(name)))
             return make_id_(arg);
         }
       }
@@ -2130,7 +2132,7 @@ namespace dacli
         t_type base = get_base_type();
         if (base != TYPE_L && base != TYPE_X && base != TYPE_Z && base != TYPE_XI) {
           clear_();
-          err.set("not a collection argument");
+          err.set(mk_cstr("not a collection argument"));
         }
       }
     }
@@ -2141,12 +2143,12 @@ namespace dacli
       return {};
     }
 
-    t_cref t_collection_cref::find_member(p_cstr name) const {
+    t_cref t_collection_cref::operator[](p_cstr name) const {
       if (is_valid_()) {
         auto max = get_().second.info_.mem_.size();
         for (decltype(max) ix = 0; ix < max; ++ix) {
           p_carg arg = (p_carg)get_().second.info_.mem_[ix];
-          if (!std::strcmp(arg->first.back().c_str(), name))
+          if (!std::strcmp(arg->first.back().c_str(), get(name)))
             return make_ref_(arg);
         }
       }
@@ -2175,7 +2177,7 @@ namespace dacli
     t_list_ref::t_list_ref(t_err& err, t_ref ref) : t_collection_ref(err, ref) {
       if (!err && get_base_type() != TYPE_L) {
         clear_();
-        err.set("id is not a list argument");
+        err.set(mk_cstr("id is not a list argument"));
       }
     }
 
@@ -2189,24 +2191,25 @@ namespace dacli
             set_().second.info_.mem_[one] = set_().second.info_.mem_[two];
             set_().second.info_.mem_[two] = tmp;
           } else
-            err.set("not in scope");
+            err.set(mk_cstr("not in scope"));
         } else
-          err.set("invalid reference");
+          err.set(mk_cstr("invalid reference"));
       }
       return !err;
     }
 
-    t_ref t_list_ref::add(t_err& err, p_csyntax p) {
+    t_ref t_list_ref::add(t_err& err, p_cstr cstr) {
       if (!err) {
         if (is_valid_()) {
+          p_cstr_ p = get(cstr);
           p = syntax::parse::parse_arg(err, *this, p);
           if (!err) { // must retrun the ref - XXX
             if (*p == '\0')
               return {}; // can write the back
-            err.set("not terminated correctly");
+            err.set(mk_cstr("not terminated correctly"));
           }
         } else
-          err.set("invalid reference");
+          err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2216,7 +2219,7 @@ namespace dacli
       if (!err) {
         if (is_valid_())
           return set_argn_().add_simple_(err, *this, std::move(name), params);
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2227,7 +2230,7 @@ namespace dacli
         if (is_valid_())
           return set_argn_().add_simple_(err, *this, std::move(name),
                                          std::move(value), params);
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2238,7 +2241,7 @@ namespace dacli
         if (is_valid_())
           return set_argn_().add_boolean_(err, *this, std::move(name),
                                           state, params);
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2249,7 +2252,7 @@ namespace dacli
         if (is_valid_())
           return set_argn_().add_compound_(err, *this, std::move(name),
                                            std::move(values), params);
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2262,7 +2265,7 @@ namespace dacli
           return set_argn_().add_compound_(err, *this, std::move(name),
                                            std::move(values),
                                            std::move(value), params);
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2273,7 +2276,7 @@ namespace dacli
         if (is_valid_())
           return set_argn_().add_array_(err, *this, std::move(name), init,
                                         params);
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2284,7 +2287,7 @@ namespace dacli
         if (is_valid_())
           return set_argn_().add_array_(err, *this, std::move(name),
                                         std::move(values), params);
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2295,7 +2298,7 @@ namespace dacli
         if (is_valid_())
           return set_argn_().add_selection_(err, *this, std::move(name),
                                             std::move(values), params);
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2305,7 +2308,7 @@ namespace dacli
       if (!err) {
         if (is_valid_())
           return set_argn_().add_list_(err, *this, std::move(name), params);
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2316,7 +2319,7 @@ namespace dacli
         if (is_valid_())
           return set_argn_().add_openlist_(err, *this, std::move(name),
                                            params);
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2327,7 +2330,7 @@ namespace dacli
         if (is_valid_())
           return set_argn_().add_option_(err, *this, std::move(name),
                                          params);
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2338,7 +2341,7 @@ namespace dacli
         if (is_valid_())
            return set_argn_().add_lookup_(err, *this, std::move(name),
                                           params);
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2359,7 +2362,7 @@ namespace dacli
     t_list_cref::t_list_cref(t_err& err, t_cref ref) : t_collection_cref(err, ref) {
       if (!err && get_base_type() != TYPE_L) {
         clear_();
-        err.set("id is not a list argument");
+        err.set(mk_cstr("id is not a list argument"));
       }
     }
 
@@ -2374,7 +2377,7 @@ namespace dacli
       : t_collection_ref(err, ref) {
       if (!err && get_base_type() != TYPE_Z) {
         clear_();
-        err.set("id is not a option argument");
+        err.set(mk_cstr("id is not a option argument"));
       }
     }
 
@@ -2384,20 +2387,21 @@ namespace dacli
       return EMPTY_s;
     }
 
-    t_ref t_options_ref::add(t_err& err, p_csyntax p) {
+    t_ref t_options_ref::add(t_err& err, p_cstr cstr) {
       if (!err) {
         if (is_valid_()) {
           if (is_empty()) { // looks wrong
+            p_cstr_ p = get(cstr);
             p = syntax::parse::parse_option(err, *this, p);
             if (!err) {
               if (*p == '\0')
                 return {};
-              err.set("not terminated correctly");
+              err.set(mk_cstr("not terminated correctly"));
             }
           } else
-            err.set("list must be empty");
+            err.set(mk_cstr("list must be empty"));
         } else
-          err.set("invalid reference");
+          err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2409,7 +2413,7 @@ namespace dacli
           return set_argn_().add_simple_(err, *this, std::move(name),
                                          params);
         }
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2421,7 +2425,7 @@ namespace dacli
           return set_argn_().add_simple_(err, *this, std::move(name),
                                          std::move(value), params);
         }
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2433,7 +2437,7 @@ namespace dacli
           return set_argn_().add_boolean_(err, *this, std::move(name), state,
                                           params);
         }
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2446,7 +2450,7 @@ namespace dacli
           return set_argn_().add_compound_(err, *this, std::move(name),
                                            std::move(values), params);
         }
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2461,7 +2465,7 @@ namespace dacli
                                            std::move(values),
                                            std::move(value), params);
         }
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2474,7 +2478,7 @@ namespace dacli
           return set_argn_().add_array_(err, *this, std::move(name), init,
                                         params);
         }
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2487,7 +2491,7 @@ namespace dacli
           return set_argn_().add_array_(err, *this, std::move(name),
                                         std::move(values), params);
         }
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2500,7 +2504,7 @@ namespace dacli
           return set_argn_().add_selection_(err, *this, std::move(name),
                                             std::move(values), params);
         }
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2511,7 +2515,7 @@ namespace dacli
           const t_oparams params{false};
           return set_argn_().add_list_(err, *this, std::move(name), params);
         }
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2523,7 +2527,7 @@ namespace dacli
           return set_argn_().add_openlist_(err, *this, std::move(name),
                                            params);
         }
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2535,7 +2539,7 @@ namespace dacli
           const t_params params{t_oparams{false}, rparams};
           return set_argn_().add_lookup_(err, *this, std::move(name), params);
         }
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2557,7 +2561,7 @@ namespace dacli
       : t_collection_cref(err, ref) {
       if (!err && get_base_type() != TYPE_Z) {
         clear_();
-        err.set("id is not a option argument");
+        err.set(mk_cstr("id is not a option argument"));
       }
     }
 
@@ -2578,7 +2582,7 @@ namespace dacli
       : t_collection_ref(err, ref) {
       if (!err && get_base_type() != TYPE_X) {
         clear_();
-        err.set("id is not a lookup argument");
+        err.set(mk_cstr("id is not a lookup argument"));
       }
     }
 
@@ -2595,7 +2599,7 @@ namespace dacli
           const t_oparams params{false};
           return set_argn_().add_simple_(err, *this, std::move(name), params);
         }
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2607,7 +2611,7 @@ namespace dacli
           return set_argn_().add_boolean_(err, *this, std::move(name), false,
                                           params);
         }
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2620,7 +2624,7 @@ namespace dacli
           return set_argn_().add_compound_(err, *this, std::move(name),
                                            std::move(values), params);
         }
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2633,7 +2637,7 @@ namespace dacli
           return set_argn_().add_selection_(err, *this, std::move(name),
                                            std::move(values), params);
         }
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2646,7 +2650,7 @@ namespace dacli
           return set_argn_().add_array_(err, *this, std::move(name), true,
                                         params);
         }
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2658,7 +2662,7 @@ namespace dacli
           const t_params params{t_oparams{false}, rparams};
           return set_argn_().add_lookup_(err, *this, std::move(name), params);
         }
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2683,7 +2687,7 @@ namespace dacli
       if (!err) {
         if (is_valid_())
           return set_argn_().add_lookup_value_(err, *this, std::move(name));
-        err.set("invalid reference");
+        err.set(mk_cstr("invalid reference"));
       }
       return {};
     }
@@ -2694,13 +2698,13 @@ namespace dacli
       return false;
     }
 
-    t_ref t_lookup_ref::find_value(p_cstr name) {
+    t_ref t_lookup_ref::get_value(p_cstr name) {
       if (is_valid_())
         return set_argn_().get_lookup_value_(*this, name);
       return {};
     }
 
-    t_cref t_lookup_ref::find_value(p_cstr name) const {
+    t_cref t_lookup_ref::get_value(p_cstr name) const {
       if (is_valid_())
         return get_argn_().get_lookup_value_(*this, name);
       return {};
@@ -2769,7 +2773,7 @@ namespace dacli
       : t_collection_cref(err, ref) {
       if (!err && get_base_type() != TYPE_X) {
         clear_();
-        err.set("id is not a lookup argument");
+        err.set(mk_cstr("id is not a lookup argument"));
       }
     }
 
@@ -2786,7 +2790,7 @@ namespace dacli
       return false;
     }
 
-    t_cref t_lookup_cref::find_value(p_cstr name) const {
+    t_cref t_lookup_cref::get_value(p_cstr name) const {
       if (is_valid_())
         return get_argn_().get_lookup_value_(*this, name);
       return {};
@@ -2843,7 +2847,7 @@ namespace dacli
       : t_collection_ref(err, ref) {
       if (!err && get_type() != TYPE_XI) {
         clear_();
-        err.set("id is not a lookup value argument");
+        err.set(mk_cstr("id is not a lookup value argument"));
       }
     }
 
@@ -2857,7 +2861,7 @@ namespace dacli
       : t_collection_cref(err, ref) {
       if (!err && get_type() != TYPE_XI) {
         clear_();
-        err.set("id is not a lookup value argument");
+        err.set(mk_cstr("id is not a lookup value argument"));
       }
     }
 
@@ -2867,9 +2871,9 @@ namespace dacli
       if (!err) {
         auto p = table_.insert({t_fullname{"</>"}, t_arginfo(TYPE_L)});
         if (p.second)
-          p.first->second.path_.push_back(c_str(TYPE_L));
+          p.first->second.path_.push_back(get(c_str(TYPE_L)));
         else
-          err.set("could not insert");
+          err.set(mk_cstr("could not insert"));
       }
     }
 
@@ -2908,12 +2912,12 @@ namespace dacli
             else
               v.path_.assign(parent.get_().second.path_.begin(),
                              parent.get_().second.path_.end() - 1);
-            v.path_.push_back(c_str(get_path_type(type)));
+            v.path_.push_back(get(c_str(get_path_type(type))));
             parent.set_().second.values_.push_back(fullname.back()); // make a pointer?
             parent.set_().second.info_.mem_.push_back(&(*p.first));
             return {this , &(*p.first)};
           } else
-            err.set("name not unique");
+            err.set(mk_cstr("name not unique"));
         }
       }
       return {};
@@ -3260,11 +3264,11 @@ namespace dacli
                     mem_pair.first->second.info_.mem_   = arg->second.info_.mem_;
                     break;
                   default:
-                    err.set("unexpected");
+                    err.set(mk_cstr("unexpected"));
                     break;
                 }
               } else
-                err.set("could not insert");
+                err.set(mk_cstr("could not insert"));
               if (err)
                 break;
             }
@@ -3274,11 +3278,11 @@ namespace dacli
               return {this, &(*pair.first)};
             }
           } else if (pair.first != std::end(table_))
-            err.set("lookup value exist");
+            err.set(mk_cstr("lookup value exist"));
           else
-            err.set("could not insert lookup value");
+            err.set(mk_cstr("could not insert lookup value"));
         } else
-          err.set("no name");
+          err.set(mk_cstr("no name"));
       }
       return {};
     }
@@ -3314,13 +3318,13 @@ namespace dacli
 
     t_ref t_argn::get_lookup_value_(t_ref ref,  p_cstr name) {
       t_fullname fullname(ref.get_fullname());
-      fullname.push_back(name);
+      fullname.push_back(get(name));
       return operator[](fullname);
     }
 
     t_cref t_argn::get_lookup_value_(t_cref ref, p_cstr name) const {
       t_fullname fullname(ref.get_fullname());
-      fullname.push_back(name);
+      fullname.push_back(get(name));
       return operator[](fullname);
     }
 
@@ -3363,7 +3367,7 @@ namespace dacli
         std::string type("[");
         const t_arginfo& info = p.second.info_;
         type += '<';
-        type += c_str(info.type_);
+        type += get(c_str(info.type_));
         type += '>';
 
         t_type base = get_base_type(info.type_);
@@ -3616,7 +3620,7 @@ namespace dacli
         if (list && ref) {
           // make sure something is not inserted from itself.
         } else
-          err.set("invalid reference objects");
+          err.set(mk_cstr("invalid reference objects"));
       }
       return false;
     }
@@ -3627,7 +3631,7 @@ namespace dacli
   t_bool parse_syntax(t_err& err, argn::t_argn& argn, p_cstr p) {
     argn::t_list_ref list(err, argn.get_root());
     if (!err)
-      parse::parse_list(err, list, parse::strip_space(p));
+      parse::parse_list(err, list, parse::strip_space(get(p)));
     return !err;
   }
 

@@ -44,8 +44,10 @@ namespace dainty
 namespace dacli
 {
   using named::p_cstr;
+  using named::p_cstr_; // XXX
   using named::t_void;
   using named::t_bool;
+  using named::mk_cstr;
 
 /******************************************************************************/
 
@@ -59,11 +61,11 @@ namespace dacli
     t_err() : position_(nullptr) { }
 
     operator t_bool () const { return reason_.length(); }
-    t_err& set(p_cstr p, std::string&& reason);
-    t_err& set(std::string&& reason);
+    t_err& set(p_cstr_ p, p_cstr reason);
+    t_err& set(p_cstr reason);
 
     std::string reason_;
-    p_cstr      position_;
+    p_cstr_     position_;
   };
 
 /******************************************************************************/
@@ -153,31 +155,32 @@ namespace dacli
       return TYPE_S; // can you do better
     }
 
-    inline p_cstr c_str(t_type t_argype) {
-      switch (t_argype) {
-        case TYPE_Q:   return "Q";
-        case TYPE_A:   return "A";
-        case TYPE_OA:  return "OA";
-        case TYPE_X:   return "X";
-        case TYPE_OX:  return "OX";
-        case TYPE_XI:  return "IX";
-        case TYPE_Z:   return "Z";
-        case TYPE_OZ:  return "OZ";
-        case TYPE_S:   return "S";
-        case TYPE_OS:  return "OS";
-        case TYPE_C:   return "C";
-        case TYPE_OC:  return "OC";
-        case TYPE_L:   return "L";
-        case TYPE_OL:  return "OL";
-        case TYPE_B:   return "B";
-        case TYPE_OB:  return "OB";
-        case TYPE_MB:  return "MB";
-        case TYPE_H:   return "H";
-        case TYPE_OH:  return "OH";
-        case TYPE_K:   return "K";
-        case TYPE_OK:  return "OK";
+    constexpr p_cstr c_str(t_type argype) {
+      p_cstr::t_value str = "undefined";
+      switch (argype) {
+        case TYPE_Q:   str = "Q";
+        case TYPE_A:   str = "A";
+        case TYPE_OA:  str = "OA";
+        case TYPE_X:   str = "X";
+        case TYPE_OX:  str = "OX";
+        case TYPE_XI:  str = "IX";
+        case TYPE_Z:   str = "Z";
+        case TYPE_OZ:  str = "OZ";
+        case TYPE_S:   str = "S";
+        case TYPE_OS:  str = "OS";
+        case TYPE_C:   str = "C";
+        case TYPE_OC:  str = "OC";
+        case TYPE_L:   str = "L";
+        case TYPE_OL:  str = "OL";
+        case TYPE_B:   str = "B";
+        case TYPE_OB:  str = "OB";
+        case TYPE_MB:  str = "MB";
+        case TYPE_H:   str = "H";
+        case TYPE_OH:  str = "OH";
+        case TYPE_K:   str = "K";
+        case TYPE_OK:  str = "OK";
       }
-      return "undefined";
+      return named::mk_cstr(str);
     }
 
     inline const std::string& str(t_bool state) {
@@ -255,7 +258,6 @@ namespace dacli
     using t_pair    = std::pair<t_itr, bool>;
     using p_arg     = t_arg*;
     using p_carg    = const t_arg*;
-    using p_csyntax = p_cstr;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -513,28 +515,21 @@ namespace dacli
       t_ref  operator[](t_ix);
       t_cref operator[](t_ix) const;
 
-      template<int N> t_ref operator[](const char (&name)[N]) {
-        return find_member(name);
-      }
+      t_ref  operator[](p_cstr name);
+      t_cref operator[](p_cstr name) const;
 
-      template<int N> t_cref operator[](const char (&name)[N]) const {
-        return find_member(name);
-      }
-
+      inline
       t_ref  operator[](const t_name& name) {
-        return find_member(name.c_str());
+        return (*this)[mk_cstr(name.c_str())];
       }
 
+      inline
       t_cref operator[](const t_name& name) const {
-        return find_member(name.c_str());
+        return (*this)[mk_cstr(name.c_str())];
       }
 
       t_n    get_size() const;
       t_bool is_empty() const;
-
-    private:
-      t_ref  find_member(p_cstr);
-      t_cref find_member(p_cstr) const;
     };
 
     class t_collection_cref : public t_cref {
@@ -543,20 +538,15 @@ namespace dacli
       t_collection_cref(t_err&, t_cref);
 
       t_cref operator[](t_ix idx) const;
+      t_cref operator[](p_cstr name) const;
 
-      template<int N> t_cref operator[](const char (&name)[N]) const {
-        return find_member(name);
-      }
-
+      inline
       t_cref operator[](const t_name& name) const {
-        return find_member(name.c_str());
+        return (*this)[mk_cstr(name.c_str())];
       }
 
       t_n    get_size() const;
       t_bool is_empty() const;
-
-    private:
-      t_cref find_member(p_cstr) const;
     };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -649,20 +639,17 @@ namespace dacli
       t_ref  add_value(t_err&, t_name);        // remove t_err from all calls
       t_bool del_value(const t_name&);
 
-      template<int N> t_ref get_value(const char (&name)[N]) {
-        return find_value(name);
-      }
+      t_ref  get_value(p_cstr name);
+      t_cref get_value(p_cstr name) const;
 
-      template<int N> t_cref get_value(const char (&name)[N]) const {
-        return find_value(name);
-      }
-
+      inline
       t_ref get_value(const t_name& name) {
-        return find_value(name.c_str());
+        return get_value(mk_cstr(name.c_str()));
       }
 
+      inline
       t_cref get_value(const t_name& name) const {
-        return find_value(name.c_str());
+        return get_value(mk_cstr(name.c_str()));
       }
 
       t_void clear_value();
@@ -675,10 +662,6 @@ namespace dacli
       t_ref   next_value(t_ref);
       t_cref  next_value(t_ref) const;
       t_cref cnext_value(t_cref) const;
-
-    private:
-      t_ref  find_value(p_cstr);
-      t_cref find_value(p_cstr) const;
     };
 
     class t_lookup_cref : public t_collection_cref {
@@ -690,12 +673,11 @@ namespace dacli
 
       t_bool is_initialized() const;
 
-      template<int N> t_cref get_value(const char (&name)[N]) const {
-        return find_value(name);
-      }
+      t_cref get_value(p_cstr name) const;
 
+      inline
       t_cref get_value(const t_name& name) const {
-        return find_value(name.c_str());
+        return get_value(mk_cstr(name.c_str()));
       }
 
       t_n     size_value() const;
@@ -705,9 +687,6 @@ namespace dacli
 
       t_cref  next_value(t_ref) const;
       t_cref cnext_value(t_cref) const;
-
-    private:
-      t_cref find_value(p_cstr) const;
     };
 
 ////////////////////////////////////////////////////////////////////////////////

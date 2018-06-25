@@ -88,7 +88,7 @@ void print_values(t_err& err, t_cref ref) {
         std::cout << "boolean argument : " << make_long(boolean.get_fullname()) << std::endl;
       } break;
       default: {
-        err.set("uknown");
+        err.set(mk_cstr("uknown"));
       } break;
     }
   }
@@ -109,14 +109,15 @@ void print_values(t_err& err, const t_argn& argn) {
 void example1() {
   t_err err;
   t_argn argn(err);
-  parse_syntax(err, argn, "(vlans@n{param1=,param2=}="
-                            "[vlan-1:{1,2},vlan-2:{2,3},vlan-3:{3,4}])");
+  parse_syntax(err, argn,
+               mk_cstr("(vlans@n{param1=,param2=}="
+                       "[vlan-1:{1,2},vlan-2:{2,3},vlan-3:{3,4}])"));
   if (!err) {
     t_fullname vlans_dict{"</>", "<vlans>"};
     t_lookup_ref       dict  (err, argn[vlans_dict]);
-    t_lookup_value_ref vlan_1(err, dict.get_value("<vlan-1>"));
-    t_simple_ref         param1(err, vlan_1["<param1>"]);
-    t_simple_ref         param2(err, vlan_1["<param2>"]);
+    t_lookup_value_ref vlan_1(err, dict.get_value(mk_cstr("<vlan-1>")));
+    t_simple_ref         param1(err, vlan_1[mk_cstr("<param1>")]);
+    t_simple_ref         param2(err, vlan_1[mk_cstr("<param2>")]);
     if (!err) {
       std::cout << "param1 = " << param1.get_value() << std::endl;
       param1.set_value(err, "<9>");
@@ -149,8 +150,9 @@ void example1() {
 void example2() {
   t_err err;
   t_argn argn(err);
-  parse_syntax(err, argn, "(vlans@n{param1=,param2=}="
-                            "[vlan-1:{1,2},vlan-2:{2,3},vlan-3:{3,4}])");
+  parse_syntax(err, argn,
+               mk_cstr("(vlans@n{param1=,param2=}="
+                       "[vlan-1:{1,2},vlan-2:{2,3},vlan-3:{3,4}])"));
   if (!err)
     print_values(err, argn);
 }
@@ -170,16 +172,16 @@ void example3() {
   vlans.add_simple(err, "<param2>");
   {
     t_lookup_value_ref vlan{vlans.add_value(err, "<vlan-1>")};
-    t_simple_ref{vlan["<param1>"]}.set_value(err, "1");
-    t_simple_ref{vlan["<param2>"]}.set_value(err, "2");
+    t_simple_ref{vlan[mk_cstr("<param1>")]}.set_value(err, "1");
+    t_simple_ref{vlan[mk_cstr("<param2>")]}.set_value(err, "2");
   }
 
   {
     t_lookup_value_ref vlan(err, vlans.add_value(err, "<vlan-2>"));
     if (!err) {
-      t_simple_ref param1(err, vlan["<param1>"]);
+      t_simple_ref param1(err, vlan[mk_cstr("<param1>")]);
       param1.set_value(err, "2");
-      t_simple_ref param2(err, vlan["<param2>"]);
+      t_simple_ref param2(err, vlan[mk_cstr("<param2>")]);
       param1.set_value(err, "3");
     }
   }
@@ -187,9 +189,9 @@ void example3() {
   {
     t_lookup_value_ref vlan(err, vlans.add_value(err, "<vlan-3>"));
     if (!err) {
-      t_simple_ref param1(err, vlan["<param1>"]);
+      t_simple_ref param1(err, vlan[mk_cstr("<param1>")]);
       param1.set_value(err, "3");
-      t_simple_ref param2(err, vlan["<param2>"]);
+      t_simple_ref param2(err, vlan[mk_cstr("<param2>")]);
       param1.set_value(err, "4");
     }
   }
@@ -253,10 +255,12 @@ void example5() {
 
   // register - once
   t_argn argn(err);
-  parse_syntax(err, argn,  "(cmd@n=, args=(in=(*),out=(*)))");
+  parse_syntax(err, argn,
+               mk_cstr("(cmd@n=, args=(in=(*),out=(*)))"));
 
   t_argn argn1(err);
-  parse_syntax(err, argn1, "(cmd@n=[mcast,vlan], args=(in=(),out=()))");
+  parse_syntax(err, argn1,
+               mk_cstr("(cmd@n=[mcast,vlan], args=(in=(),out=()))"));
 
   merge_syntax(err, argn1, argn);
   if (!err) {
@@ -266,7 +270,8 @@ void example5() {
 
   // incoming
   t_argn argn2(err);
-  parse_syntax(err, argn2, "(cmd=(</,mcast,vlan>=(args=(in=(),out=())))");
+  parse_syntax(err, argn2,
+               mk_cstr("(cmd=(</,mcast,vlan>=(args=(in=(),out=())))"));
   merge_syntax(err, argn2, table);
 }
 
@@ -282,10 +287,11 @@ void example5_1() {
   t_err err;
   t_argn table(err);
   t_list_ref    cmd_ref = table.get_root().add_list(err, {"cmd"}, optional);
-  t_options_ref cmd_option_ref{cmd_ref.add(err, "([list]=(in_args(*),out_args=(*))|"
-                                                " [config]=(in_args(*),out_args=(*))|"
-                                                " [help]=(in_args(*),out_args=(*))|"
-                                                " [test]=(in_args=(*),out_args=(*)))")};
+  t_options_ref cmd_option_ref{cmd_ref.add(err,
+                         mk_cstr("([list]=(in_args(*),out_args=(*))|"
+                                 " [config]=(in_args(*),out_args=(*))|"
+                                 " [help]=(in_args(*),out_args=(*))|"
+                                 " [test]=(in_args=(*),out_args=(*)))"))};
   table.print();
 
   if (err)
@@ -293,22 +299,25 @@ void example5_1() {
 
   // register - once
   t_argn argn1(err);
-  parse_syntax(err, argn1, "(cmd@=[/,mcast,vlan], in_args=(yes), :out_args=(no)))");
+  parse_syntax(err, argn1,
+               mk_cstr("(cmd@=[/,mcast,vlan], in_args=(yes), :out_args=(no)))"));
 
   t_argn argn(err);
-  parse_syntax(err, argn,  "(cmd@n=, args=(in=(*), :out=(*)))");
+  parse_syntax(err, argn,  mk_cstr("(cmd@n=, args=(in=(*), :out=(*)))"));
 
   merge_syntax(err, argn1, argn);
   if (!err) {
     t_list_cref root = argn1.cget_root();
-    t_array_cref cmd{root["<cmd>"]};
-    t_list_ref list = cmd_option_ref.add_list(err, make_flat(cmd.get_values()));//make_name(t_array_cref{argn1["cmd"]}.get_values()),
+    t_array_cref cmd{root[mk_cstr("<cmd>")]};
+    t_list_ref list = cmd_option_ref.add_list(err, make_flat(cmd.get_values()));
+      //make_name(t_array_cref{argn1["cmd"]}.get_values()),
       //list.add(err, root["<in_args>"]);
       //list.add(err, root["<out_args>"]);
 
     // incoming
     t_argn argn2(err);
-    parse_syntax(err, argn2, "(cmd=(</,mcast,vlan>=(args=(in=(),out=())))");
+    parse_syntax(err, argn2,
+                 mk_cstr("(cmd=(</,mcast,vlan>=(args=(in=(),out=())))"));
     merge_syntax(err, argn2, table);
   }
 }
@@ -319,7 +328,7 @@ void example6() {
   t_err err;
   t_argn argn(err);
 
-  argn.get_root().add(err, ":name@n{a=,b=}=[]");
+  argn.get_root().add(err, mk_cstr(":name@n{a=,b=}=[]"));
   argn.print();
 
   t_text text;
@@ -341,11 +350,11 @@ int main7(int argc, const char* argv[]) {
 
   if (argc == 3) {
     t_argn def(err);
-    parse_syntax(err, def, argv[1]);
+    parse_syntax(err, def, mk_cstr(argv[1]));
     def.print();
 
     t_argn use(err);
-    parse_syntax(err, use, argv[2]);
+    parse_syntax(err, use, mk_cstr(argv[2]));
     use.print();
 
     merge_syntax(err, use, def);
@@ -367,9 +376,9 @@ int main1(int argc, const char* argv[]) {
   t_argn use(err);
 
   if (argc > 1) {
-    parse_syntax(err, use, argv[1]);
+    parse_syntax(err, use, mk_cstr(argv[1]));
   } else
-    err.set("'use'");
+    err.set(mk_cstr("'use'"));
   if (!err) {
     use.print();
     t_text text;
