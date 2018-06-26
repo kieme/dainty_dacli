@@ -44,7 +44,6 @@ namespace dainty
 namespace dacli
 {
   using named::p_cstr;
-  using named::p_cstr_; // XXX
   using named::t_void;
   using named::t_bool;
   using named::mk_cstr;
@@ -61,11 +60,11 @@ namespace dacli
     t_err() : position_(nullptr) { }
 
     operator t_bool () const { return reason_.length(); }
-    t_err& set(p_cstr_ p, p_cstr reason);
-    t_err& set(p_cstr reason);
+    t_err set(named::p_cstr_ p, p_cstr reason);
+    t_err set(p_cstr reason);
 
-    std::string reason_;
-    p_cstr_     position_;
+    std::string    reason_;
+    named::p_cstr_ position_;
   };
 
 /******************************************************************************/
@@ -311,7 +310,7 @@ namespace dacli
     public:
       inline t_ref() = default;
       inline t_ref(const t_ref&) = default;
-      inline t_ref(t_err&, const t_ref&);
+      inline t_ref(t_err, const t_ref&);
 
       inline t_ref& operator=(const t_ref&) = default;
 
@@ -349,7 +348,7 @@ namespace dacli
       inline t_cref(const t_cref&) = default;
       inline t_cref(const t_ref& ref) : argn_(ref.argn_), arg_(ref.arg_) { }
       inline t_cref(t_ref::t_cid id)  : argn_(id.argn_), arg_(id.arg_)   { }
-      inline t_cref(t_err&, const t_cref&);
+      inline t_cref(t_err, const t_cref&);
       inline t_cref& operator=(const t_cref&) = default;
 
       t_type            get_type() const;
@@ -383,18 +382,18 @@ namespace dacli
     class t_simple_ref : public t_ref {
     public:
       t_simple_ref(t_ref);
-      t_simple_ref(t_err&, t_ref);
+      t_simple_ref(t_err, t_ref);
 
-      t_bool transform_to(t_err&, t_compound_ref&, t_values values);
+      t_bool transform_to(t_err, t_compound_ref&, t_values values);
 
       const t_value& get_value() const;
-            t_bool   set_value(t_err&, t_value);
+            t_bool   set_value(t_err, t_value);
     };
 
     class t_simple_cref : public t_cref {
     public:
       t_simple_cref(t_cref);
-      t_simple_cref(t_err&, t_cref);
+      t_simple_cref(t_err, t_cref);
 
       const t_value& get_value() const;
     };
@@ -404,16 +403,16 @@ namespace dacli
     class t_boolean_ref : public t_ref {
     public:
       t_boolean_ref(t_ref);
-      t_boolean_ref(t_err&, t_ref);
+      t_boolean_ref(t_err, t_ref);
 
       t_bool get_value() const;
-      t_bool set_value(t_err&, bool); // if it is none modifyable?
+      t_bool set_value(t_err, bool); // if it is none modifyable?
     };
 
     class t_boolean_cref : public t_cref {
     public:
       t_boolean_cref(t_cref);
-      t_boolean_cref(t_err&, t_cref);
+      t_boolean_cref(t_err, t_cref);
 
       t_bool get_value() const;
     };
@@ -423,7 +422,7 @@ namespace dacli
     class t_array_ref : public t_ref {
     public:
       t_array_ref(t_ref);
-      t_array_ref(t_err&, t_ref);
+      t_array_ref(t_err, t_ref);
 
       t_range_params get_range_params() const;
 
@@ -431,13 +430,13 @@ namespace dacli
       t_bool is_initialized() const;
 
       const t_values& get_values() const;
-            t_bool    set_values(t_err&, t_values);
+            t_bool    set_values(t_err, t_values);
     };
 
     class t_array_cref : public t_cref {
     public:
       t_array_cref(t_cref);
-      t_array_cref(t_err&, t_cref);
+      t_array_cref(t_err, t_cref);
 
       t_range_params get_range_params() const;
 
@@ -450,19 +449,19 @@ namespace dacli
     class t_compound_ref : public t_ref {
     public:
       t_compound_ref(t_ref);
-      t_compound_ref(t_err&, t_ref);
+      t_compound_ref(t_err, t_ref);
 
-      t_bool add_missing_part_values(t_err&, const t_values&);
+      t_bool add_missing_part_values(t_err, const t_values&);
 
       const t_values& get_part_values() const;
       const t_value&  get_value() const;
-            t_bool    set_value(t_err&, t_value);
+            t_bool    set_value(t_err, t_value);
     };
 
     class t_compound_cref : public t_cref {
     public:
       t_compound_cref(t_cref);
-      t_compound_cref(t_err&, t_cref);
+      t_compound_cref(t_err, t_cref);
 
       const t_values& get_part_values() const;
       const t_value&  get_value() const;
@@ -473,22 +472,22 @@ namespace dacli
     class t_selection_ref : public t_ref {
     public:
       t_selection_ref(t_ref);
-      t_selection_ref(t_err&, t_ref);
+      t_selection_ref(t_err, t_ref);
 
       const t_values& get_values() const;
       const t_value&  get_value()  const;
-            t_bool    set_value (t_err&, t_value);
-            t_bool    test_value(t_err&, t_value) const;
+            t_bool    set_value (t_err, t_value);
+            t_bool    test_value(t_err, t_value) const;
     };
 
     class t_selection_cref : public t_cref {
     public:
       t_selection_cref(t_cref);
-      t_selection_cref(t_err&, t_cref);
+      t_selection_cref(t_err, t_cref);
 
       const t_values& get_values() const;
       const t_value&  get_value() const;
-            t_bool    test_value(t_err&, t_value) const;
+            t_bool    test_value(t_err, t_value) const;
     };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -496,13 +495,13 @@ namespace dacli
     class t_openlist_ref : public t_ref {
     public:
       t_openlist_ref(t_ref);
-      t_openlist_ref(t_err&, t_ref);
+      t_openlist_ref(t_err, t_ref);
     };
 
     class t_openlist_cref : public t_cref {
     public:
       t_openlist_cref(t_cref);
-      t_openlist_cref(t_err&, t_cref);
+      t_openlist_cref(t_err, t_cref);
     };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -510,7 +509,7 @@ namespace dacli
     class t_collection_ref : public t_ref {
     public:
       t_collection_ref(t_ref);
-      t_collection_ref(t_err&, t_ref);
+      t_collection_ref(t_err, t_ref);
 
       t_ref  operator[](t_ix);
       t_cref operator[](t_ix) const;
@@ -535,7 +534,7 @@ namespace dacli
     class t_collection_cref : public t_cref {
     public:
       t_collection_cref(t_cref);
-      t_collection_cref(t_err&, t_cref);
+      t_collection_cref(t_err, t_cref);
 
       t_cref operator[](t_ix idx) const;
       t_cref operator[](p_cstr name) const;
@@ -554,25 +553,25 @@ namespace dacli
     class t_list_ref : public t_collection_ref {
     public:
       t_list_ref(t_ref);
-      t_list_ref(t_err&, t_ref);
+      t_list_ref(t_err, t_ref);
 
-      bool swap(t_err&, t_ix, t_ix);
+      bool swap(t_err, t_ix, t_ix);
 
-      t_ref add (t_err&, p_cstr);
-      t_ref add (t_err&, t_cref);
+      t_ref add (t_err, p_cstr);
+      t_ref add (t_err, t_cref);
 
-      t_ref add_simple    (t_err&, t_name,                    const t_oparams&);
-      t_ref add_simple    (t_err&, t_name, t_value,           const t_oparams&);
-      t_ref add_boolean   (t_err&, t_name, bool,              const t_oparams&);
-      t_ref add_compound  (t_err&, t_name, t_values,          const t_oparams&);
-      t_ref add_compound  (t_err&, t_name, t_values, t_value, const t_oparams&);
-      t_ref add_selection (t_err&, t_name, t_values,          const t_oparams&);
-      t_ref add_list      (t_err&, t_name,                    const t_oparams&);
-      t_ref add_openlist  (t_err&, t_name,                    const t_oparams&);
-      t_ref add_option    (t_err&, t_name,                    const t_oparams&);
-      t_ref add_array     (t_err&, t_name, bool,              const t_params&);
-      t_ref add_array     (t_err&, t_name, t_values,          const t_params&);
-      t_ref add_lookup    (t_err&, t_name,                    const t_params&);
+      t_ref add_simple    (t_err, t_name,                    const t_oparams&);
+      t_ref add_simple    (t_err, t_name, t_value,           const t_oparams&);
+      t_ref add_boolean   (t_err, t_name, bool,              const t_oparams&);
+      t_ref add_compound  (t_err, t_name, t_values,          const t_oparams&);
+      t_ref add_compound  (t_err, t_name, t_values, t_value, const t_oparams&);
+      t_ref add_selection (t_err, t_name, t_values,          const t_oparams&);
+      t_ref add_list      (t_err, t_name,                    const t_oparams&);
+      t_ref add_openlist  (t_err, t_name,                    const t_oparams&);
+      t_ref add_option    (t_err, t_name,                    const t_oparams&);
+      t_ref add_array     (t_err, t_name, bool,              const t_params&);
+      t_ref add_array     (t_err, t_name, t_values,          const t_params&);
+      t_ref add_lookup    (t_err, t_name,                    const t_params&);
 
       bool del(const t_name&);
     };
@@ -580,7 +579,7 @@ namespace dacli
     class t_list_cref : public t_collection_cref {
     public:
       t_list_cref(t_cref);
-      t_list_cref(t_err&, t_cref);
+      t_list_cref(t_err, t_cref);
     };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -588,24 +587,24 @@ namespace dacli
     class t_options_ref : public t_collection_ref {
     public:
       t_options_ref(t_ref);
-      t_options_ref(t_err&, t_ref);
+      t_options_ref(t_err, t_ref);
 
       const t_name& get_extension() const; // nothing is allowed to be optional
 
-      t_ref add (t_err&, p_cstr);
-      t_ref add (t_err&, t_cref);
+      t_ref add (t_err, p_cstr);
+      t_ref add (t_err, t_cref);
 
-      t_ref add_simple   (t_err&, t_name);
-      t_ref add_simple   (t_err&, t_name, t_value);
-      t_ref add_boolean  (t_err&, t_name, bool);
-      t_ref add_compound (t_err&, t_name, t_values);
-      t_ref add_compound (t_err&, t_name, t_values, t_value);
-      t_ref add_selection(t_err&, t_name, t_values);
-      t_ref add_list     (t_err&, t_name);
-      t_ref add_openlist (t_err&, t_name);
-      t_ref add_array    (t_err&, t_name, bool,     const t_rparams&);
-      t_ref add_array    (t_err&, t_name, t_values, const t_rparams&);
-      t_ref add_lookup   (t_err&, t_name,           const t_rparams&);
+      t_ref add_simple   (t_err, t_name);
+      t_ref add_simple   (t_err, t_name, t_value);
+      t_ref add_boolean  (t_err, t_name, bool);
+      t_ref add_compound (t_err, t_name, t_values);
+      t_ref add_compound (t_err, t_name, t_values, t_value);
+      t_ref add_selection(t_err, t_name, t_values);
+      t_ref add_list     (t_err, t_name);
+      t_ref add_openlist (t_err, t_name);
+      t_ref add_array    (t_err, t_name, bool,     const t_rparams&);
+      t_ref add_array    (t_err, t_name, t_values, const t_rparams&);
+      t_ref add_lookup   (t_err, t_name,           const t_rparams&);
 
       bool del(const t_name&);
     };
@@ -613,7 +612,7 @@ namespace dacli
     class t_options_cref : public t_collection_cref {
     public:
       t_options_cref(t_cref);
-      t_options_cref(t_err&, t_cref);
+      t_options_cref(t_err, t_cref);
       const t_name& get_extension() const;
     };
 
@@ -622,21 +621,21 @@ namespace dacli
     class t_lookup_ref : public t_collection_ref {
     public:
       t_lookup_ref(t_ref);
-      t_lookup_ref(t_err&, t_ref); // nothing is allowed to be optional
+      t_lookup_ref(t_err, t_ref); // nothing is allowed to be optional
 
       t_range_params get_range_params() const;
 
-      t_cref add_simple   (t_err&, t_name);
-      t_cref add_boolean  (t_err&, t_name);
-      t_cref add_compound (t_err&, t_name, t_values);
-      t_cref add_selection(t_err&, t_name, t_values);
-      t_cref add_array    (t_err&, t_name, const t_rparams&);
-       t_ref add_lookup   (t_err&, t_name, const t_rparams&);
+      t_cref add_simple   (t_err, t_name);
+      t_cref add_boolean  (t_err, t_name);
+      t_cref add_compound (t_err, t_name, t_values);
+      t_cref add_selection(t_err, t_name, t_values);
+      t_cref add_array    (t_err, t_name, const t_rparams&);
+       t_ref add_lookup   (t_err, t_name, const t_rparams&);
 
       t_bool set_as_initialized();
       t_bool is_initialized() const;
 
-      t_ref  add_value(t_err&, t_name);        // remove t_err from all calls
+      t_ref  add_value(t_err, t_name);        // remove t_err from all calls
       t_bool del_value(const t_name&);
 
       t_ref  get_value(p_cstr name);
@@ -667,7 +666,7 @@ namespace dacli
     class t_lookup_cref : public t_collection_cref {
     public:
       t_lookup_cref(t_cref);
-      t_lookup_cref(t_err&, t_cref);
+      t_lookup_cref(t_err, t_cref);
 
       t_range_params get_range_params() const;
 
@@ -694,20 +693,20 @@ namespace dacli
     class t_lookup_value_ref : public t_collection_ref {
     public:
       t_lookup_value_ref(t_ref);
-      t_lookup_value_ref(t_err&, t_ref);
+      t_lookup_value_ref(t_err, t_ref);
     };
 
     class t_lookup_value_cref : public t_collection_cref {
     public:
       t_lookup_value_cref(t_cref);
-      t_lookup_value_cref(t_err&, t_cref);
+      t_lookup_value_cref(t_err, t_cref);
     };
 
 ////////////////////////////////////////////////////////////////////////////////
 
     class t_argn {
     public:
-      t_argn(t_err&);
+      t_argn(t_err);
 
       t_list_ref   get_root();
       t_list_cref  get_root() const;
@@ -738,37 +737,37 @@ namespace dacli
       friend class t_options_ref;
       friend class t_options_cref;
 
-      t_ref  add_simple_   (t_err&, t_ref, t_name&&, const t_oparams&);
-      t_ref  add_simple_   (t_err&, t_ref, t_name&&, t_value&&,
+      t_ref  add_simple_   (t_err, t_ref, t_name&&, const t_oparams&);
+      t_ref  add_simple_   (t_err, t_ref, t_name&&, t_value&&,
                            const t_oparams&);
-      t_ref  add_boolean_  (t_err&, t_ref, t_name&&, bool, const t_oparams&);
-      t_ref  add_compound_ (t_err&, t_ref, t_name&&, t_values&&,
+      t_ref  add_boolean_  (t_err, t_ref, t_name&&, bool, const t_oparams&);
+      t_ref  add_compound_ (t_err, t_ref, t_name&&, t_values&&,
                            const t_oparams&);
-      t_ref  add_compound_ (t_err&, t_ref, t_name&&, t_values&&, t_value&&,
+      t_ref  add_compound_ (t_err, t_ref, t_name&&, t_values&&, t_value&&,
                            const t_oparams&);
-      t_ref  add_selection_(t_err&, t_ref, t_name&&, t_values&&,
+      t_ref  add_selection_(t_err, t_ref, t_name&&, t_values&&,
                            const t_oparams&);
-      t_ref  add_list_     (t_err&, t_ref, t_name&&, const t_oparams&);
-      t_ref  add_openlist_ (t_err&, t_ref, t_name&&, const t_oparams&);
-      t_ref  add_option_   (t_err&, t_ref, t_name&&, const t_oparams&);
-      t_ref  add_array_    (t_err&, t_ref, t_name&&, bool, const t_params&);
-      t_ref  add_array_    (t_err&, t_ref, t_name&&, t_values&&,
+      t_ref  add_list_     (t_err, t_ref, t_name&&, const t_oparams&);
+      t_ref  add_openlist_ (t_err, t_ref, t_name&&, const t_oparams&);
+      t_ref  add_option_   (t_err, t_ref, t_name&&, const t_oparams&);
+      t_ref  add_array_    (t_err, t_ref, t_name&&, bool, const t_params&);
+      t_ref  add_array_    (t_err, t_ref, t_name&&, t_values&&,
                            const t_params&);
-      t_ref  add_lookup_   (t_err&, t_ref, t_name&&, const t_params&);
+      t_ref  add_lookup_   (t_err, t_ref, t_name&&, const t_params&);
       t_bool del_          (t_ref, const t_name&);
 
-      t_ref  add_lookup_value_(t_err&, t_ref, t_name&&);
+      t_ref  add_lookup_value_(t_err, t_ref, t_name&&);
       t_bool del_lookup_value_(t_ref,  const t_name&);
       t_void clr_lookup_value_(t_ref);
       t_ref  get_lookup_value_(t_ref,  p_cstr);
       t_cref get_lookup_value_(t_cref, p_cstr) const;
 
-      t_compound_ref transform_(t_err&, t_simple_ref&, t_values&&);
+      t_compound_ref transform_(t_err, t_simple_ref&, t_values&&);
 
      private:
-      t_ref add_(t_err&, t_ref, t_name&&, t_arginfo&);
-      t_ref add_(t_err&, t_ref, t_name&&, t_arginfo&, t_value&&);
-      t_ref add_(t_err&, t_ref, t_name&&, t_arginfo&, t_values&&);
+      t_ref add_(t_err, t_ref, t_name&&, t_arginfo&);
+      t_ref add_(t_err, t_ref, t_name&&, t_arginfo&, t_value&&);
+      t_ref add_(t_err, t_ref, t_name&&, t_arginfo&, t_values&&);
 
       t_table table_;
     };
@@ -782,16 +781,16 @@ namespace dacli
     t_bool is_same_definition(t_cref, t_cref, t_bool ignore_optional = false);
     t_bool is_same(t_cref, t_cref);
 
-    t_bool append(t_err&, t_list_ref, t_cref);
+    t_bool append(t_err, t_list_ref, t_cref);
   }
 
 ////////////////////////////////////////////////////////////////////////////////
 
   using t_text = std::string;
 
-  t_bool parse_syntax(t_err& err, argn::t_argn& argn, p_cstr text);
-  t_bool build_syntax(t_err& err, t_text&,       const argn::t_argn&);
-  t_bool merge_syntax(t_err& err, argn::t_argn&, const argn::t_argn&);
+  t_bool parse_syntax(t_err err, argn::t_argn& argn, p_cstr text);
+  t_bool build_syntax(t_err err, t_text&,       const argn::t_argn&);
+  t_bool merge_syntax(t_err err, argn::t_argn&, const argn::t_argn&);
 
   //bool parse_cmd  (t_text& err_msg, t_argn& argn, p_cstr cmd_p);
   //bool process_cmd(t_text& err_msg, t_argn& use,  p_cstr cmd_p);
@@ -803,11 +802,11 @@ namespace dacli
     // add test
     // add config
     // add list
-    t_dacli(t_err&);
+    t_dacli(t_err);
 
-    bool add_cli(t_err&, argn::t_name cmd_name, argn::t_argn&& cmd_in_args,
+    bool add_cli(t_err, argn::t_name cmd_name, argn::t_argn&& cmd_in_args,
                                                 argn::t_argn&& cmd_out_args);
-    bool del_cli(t_err&, const argn::t_name cmd_name);
+    bool del_cli(t_err, const argn::t_name cmd_name);
 
     bool process_incoming(icomming, callback)
   };
