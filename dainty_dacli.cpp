@@ -396,8 +396,8 @@ namespace dacli
                                 t_bool state = true;
                                 if (word[1] == '!')
                                   state = false;
-                                if (std::strcmp(word.c_str() + 1 + !state,
-                                                bool_ref.get_name().c_str()
+                                if (std::strcmp(word.get_cstr() + 1 + !state,
+                                                bool_ref.get_name().get_cstr()
                                                 + 1))
                                   bool_ref.set_value(err, state);
                                 else
@@ -964,7 +964,7 @@ namespace dacli
             name += argname;
           else {
             name += '<';
-            name.append(argname.c_str() + extname.length() - 1);
+            name.append(argname.get_cstr() + extname.length() - 1);
           }
           switch (get_base_type(type)) {
             case TYPE_S:
@@ -1519,13 +1519,13 @@ namespace dacli
         if (lh[i][0] != '.' && rh[i][0] == '.')
           return false;
         t_name l;
-        if (*lh[i].c_str() == '<')
-          l.assign(lh[i].c_str() + 1, lh[i].size()-2);
+        if (*lh[i].get_cstr() == '<')
+          l.assign(lh[i].get_cstr() + 1, lh[i].size()-2);
         else
           l = lh[i];
         t_name r;
-        if (*rh[i].c_str() == '<')
-          r.assign(rh[i].c_str() + 1, rh[i].size()-2);
+        if (*rh[i].get_cstr() == '<')
+          r.assign(rh[i].get_cstr() + 1, rh[i].size()-2);
         else
           r = rh[i];
         if (l < r)
@@ -2054,7 +2054,7 @@ namespace dacli
         auto max = get_().second.info_.mem_.size();
         for (decltype(max) ix = 0; ix < max; ++ix) {
           p_arg arg = (p_arg)set_().second.info_.mem_[ix];
-          if (!std::strcmp(arg->first.back().c_str(), get(name)))
+          if (!std::strcmp(arg->first.back().get_cstr(), get(name)))
             return make_ref_(arg);
         }
       }
@@ -2066,7 +2066,7 @@ namespace dacli
         auto max = get_().second.info_.mem_.size();
         for (decltype(max) ix = 0; ix < max; ++ix) {
           p_carg arg = (p_carg)get_().second.info_.mem_[ix];
-          if (!std::strcmp(arg->first.back().c_str(), get(name)))
+          if (!std::strcmp(arg->first.back().get_cstr(), get(name)))
             return make_id_(arg);
         }
       }
@@ -2116,7 +2116,7 @@ namespace dacli
         auto max = get_().second.info_.mem_.size();
         for (decltype(max) ix = 0; ix < max; ++ix) {
           p_carg arg = (p_carg)get_().second.info_.mem_[ix];
-          if (!std::strcmp(arg->first.back().c_str(), get(name)))
+          if (!std::strcmp(arg->first.back().get_cstr(), get(name)))
             return make_ref_(arg);
         }
       }
@@ -2839,7 +2839,7 @@ namespace dacli
       ERR_GUARD(err) {
         auto p = table_.insert({t_fullname{"</>"}, t_arginfo(TYPE_L)});
         if (p.second)
-          p.first->second.path_.push_back(get(c_str(TYPE_L)));
+          p.first->second.path_.push_back(get(get_cstr(TYPE_L)));
         else
           err.set(mk_cstr("could not insert"));
       }
@@ -2856,7 +2856,7 @@ namespace dacli
           fullname.back() = name;
           if (!parent.get_().second.info_.ext_.empty()) {
             fullname.back().erase(0, 1);
-            fullname.back().insert(0, parent.get_().second.info_.ext_.c_str(),
+            fullname.back().insert(0, parent.get_().second.info_.ext_.get_cstr(),
                                    parent.get_().second.info_.ext_.length() -1);
           }
         } else if (base == TYPE_X) {
@@ -2880,7 +2880,7 @@ namespace dacli
             else
               v.path_.assign(parent.get_().second.path_.begin(),
                              parent.get_().second.path_.end() - 1);
-            v.path_.push_back(get(c_str(get_path_type(type))));
+            v.path_.push_back(get(get_cstr(get_path_type(type))));
             parent.set_().second.values_.push_back(fullname.back()); // make a pointer?
             parent.set_().second.info_.mem_.push_back(&(*p.first));
             return {this , &(*p.first)};
@@ -3334,7 +3334,7 @@ namespace dacli
         std::string type("[");
         const t_arginfo& info = p.second.info_;
         type += '<';
-        type += get(c_str(info.type_));
+        type += get(get_cstr(info.type_));
         type += '>';
 
         t_type base = get_base_type(info.type_);
@@ -3597,7 +3597,7 @@ namespace dacli
   t_void parse_syntax(t_err err, argn::r_argn argn, R_text text) {
     ERR_GUARD(err) {
       argn::t_list_ref list(err, argn.get_root());
-      parse::parse_list(err, list, parse::strip_space(get(text.c_str())));
+      parse::parse_list(err, list, parse::strip_space(get(text.get_cstr())));
     }
   }
 

@@ -189,10 +189,12 @@ namespace dacli
     using t_path      = t_words;
 
     using t_name     = t_word;
+    using r_name     = t_prefix<t_name>::r_;
     using R_name     = t_prefix<t_name>::R_;
     using x_name     = t_prefix<t_name>::x_;
 
     using t_value    = t_word;
+    using r_value    = t_prefix<t_value>::r_;
     using R_value    = t_prefix<t_value>::R_;
     using x_value    = t_prefix<t_value>::x_;
 
@@ -200,6 +202,7 @@ namespace dacli
     using R_fullname = t_prefix<t_fullname>::R_;
 
     using t_values   = t_words;
+    using r_values   = t_prefix<t_values>::r_;
     using R_values   = t_prefix<t_values>::R_;
     using x_values   = t_prefix<t_values>::x_;
 
@@ -290,6 +293,7 @@ namespace dacli
         : range_max_(max), range_min_(min) { }
     };
     using t_rparams = t_prefix<t_range_params>::t_;
+    using r_rparams = t_prefix<t_rparams>::r_;
     using R_rparams = t_prefix<t_rparams>::R_;
 
     struct t_params : t_oparams, t_rparams {
@@ -298,6 +302,7 @@ namespace dacli
         : t_oparams(oparams), t_rparams(rparams) {
       }
     };
+    using r_params = t_prefix<t_params>::r_;
     using R_params = t_prefix<t_params>::R_;
 
     static const t_params unbound_range{};
@@ -549,12 +554,12 @@ namespace dacli
 
       inline
       t_ref  operator[](R_name name) {
-        return (*this)[name.c_str()];
+        return (*this)[name.get_cstr()];
       }
 
       inline
       t_cref operator[](R_name name) const {
-        return (*this)[name.c_str()];
+        return (*this)[name.get_cstr()];
       }
 
       t_n    get_size() const;
@@ -571,7 +576,7 @@ namespace dacli
 
       inline
       t_cref operator[](R_name name) const {
-        return (*this)[name.c_str()];
+        return (*this)[name.get_cstr()];
       }
 
       t_n    get_size() const;
@@ -674,12 +679,12 @@ namespace dacli
 
       inline
       t_ref get_value(R_name name) {
-        return get_value(name.c_str());
+        return get_value(name.get_cstr());
       }
 
       inline
       t_cref get_value(R_name name) const {
-        return get_value(name.c_str());
+        return get_value(name.get_cstr());
       }
 
       t_void clear_value();
@@ -707,7 +712,7 @@ namespace dacli
 
       inline
       t_cref get_value(R_name name) const {
-        return get_value(name.c_str());
+        return get_value(name.get_cstr());
       }
 
       t_n     size_value() const;
