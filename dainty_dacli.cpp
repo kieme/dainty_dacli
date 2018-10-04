@@ -304,13 +304,13 @@ namespace dacli
             t_word word;
             p = parse_word(err, word, p);
             ERR_GUARD(err) {
-              if (word.length()) {
+              if (!word.is_empty()) {
                 ++cnt;
                 values.push_back(std::move(word));
                 while (*p == '|' && !err) {
                   p = parse_word(err, word, strip_space(p+1));
                   ERR_GUARD(err) {
-                    if (word.length()) {
+                    if (!word.is_empty()) {
                       for (auto&& i : values) {
                         if (word == i) {
                           err = err::E_SAME;
@@ -344,16 +344,14 @@ namespace dacli
           p = parse_word(err, word, p);
           ERR_GUARD(err) {
             std::string main_value;
-            if (word.length())
-              value.swap(word);
+            if (!word.is_empty())
+              value = std::move(word);
             while (*p == ':' && !err) {
               p = parse_word(err, word, strip_space(p+1));
-              ERR_GUARD(err) {
-                t_word part;
-                if (word.length()) {
-                  part.swap(word);
-                  values.push_back(std::move(part));
-                } else
+              if (!err) {
+                if (!word.is_empty())
+                  values.push_back(std::move(word));
+                else
                   err = err::E_EMPTY;
               }
             }
@@ -392,13 +390,15 @@ namespace dacli
                               t_boolean_ref bool_ref(ref);
                               t_word word;
                               p = parse_word(err, word, p);
-                              if (!word.empty()) {
+                              if (!word.is_empty()) {
                                 t_bool state = true;
-                                if (word[1] == '!')
-                                  state = false;
-                                if (std::strcmp(word.get_cstr() + 1 + !state,
-                                                bool_ref.get_name().get_cstr()
-                                                + 1))
+                                auto wrange = word.mk_range();
+                                auto brange = bool_ref.get_name().
+                                                mk_range(t_ix{1});
+                                if (wrange[t_ix{1}] == '!')
+                                  state = false; // XXX - this is wrong
+                                if (std::strcmp(wrange.get(t_ix{1 + !state}),
+                                                brange.get(t_ix{1})))
                                   bool_ref.set_value(err, state);
                                 else
                                   err = err::E_NO_MATCH;
@@ -539,7 +539,7 @@ namespace dacli
               case TYPE_S: {
                 t_value value;
                 p = parse_simple_value(err, value, p);
-                if (value.empty())
+                if (value.is_empty())
                   list.add_simple(err, name, params);
                 else
                   list.add_simple(err, name, std::move(value), params);
@@ -556,7 +556,7 @@ namespace dacli
                 t_values values;
                 t_value value;
                 p = parse_compound_values(err, values, value, p);
-                if (value.empty())
+                if (value.is_empty())
                   list.add_compound(err, name, values, params);
                 else
                   list.add_compound(err, name, values, value, params);
@@ -603,7 +603,7 @@ namespace dacli
                 case TYPE_S: {
                   t_value value;
                   p = parse_simple_value(err, value, p);
-                  if (value.empty())
+                  if (value.is_empty())
                     option.add_simple(err, name);
                   else
                     option.add_simple(err, name, std::move(value));
@@ -621,7 +621,7 @@ namespace dacli
                   t_values values;
                   t_value value;
                   p = parse_compound_values(err, values, value, p);
-                  if (value.empty())
+                  if (value.is_empty())
                     option.add_compound(err, name, values);
                   else
                     option.add_compound(err, name, values, value);
@@ -667,7 +667,7 @@ namespace dacli
                 case TYPE_S: {
                   t_value value;
                   p = parse_simple_value(err, value, p);
-                  if (value.empty())
+                  if (value.is_empty())
                     lookup.add_simple(err, name);
                   else
                     err = err::E_NOT_EMPTY;
@@ -684,7 +684,7 @@ namespace dacli
                   t_values values;
                   t_value value;
                   p = parse_compound_values(err, values, value, p);
-                  if (value.empty())
+                  if (value.is_empty())
                     lookup.add_compound(err, name, values);
                   else
                     err = err::E_NOT_EMPTY;
@@ -747,7 +747,7 @@ namespace dacli
         ERR_GUARD(err) {
           text += name;
           text += '=';
-          if (!ref.get_value().empty())
+          if (!ref.get_value().is_empty())
             text += ref.get_value();
         }
       }
@@ -786,7 +786,7 @@ namespace dacli
         ERR_GUARD(err) {
           text += name;
           text += '=';
-          if (!ref.get_value().empty())
+          if (!ref.get_value().is_empty())
             text += ref.get_value();
           for (auto&& part: ref.get_part_values()) {
             text += ':';
@@ -960,11 +960,11 @@ namespace dacli
           const t_name& extname = option.get_extension();
           const t_name& argname = ref.get_name();
           t_name name;
-          if (extname.empty())
+          if (extname.is_empty())
             name += argname;
           else {
             name += '<';
-            name.append(argname.get_cstr() + extname.length() - 1);
+            ///name.append(argname.(extname.length() - 1); // XXX
           }
           switch (get_base_type(type)) {
             case TYPE_S:
@@ -1098,12 +1098,12 @@ namespace dacli
                 break;
               case TYPE_S: {
                 t_simple_cref simple(use_ref);
-                if (simple.get_value().empty())
+                if (simple.get_value().is_empty())
                   err = err::E_EMPTY;
               } break;
               case TYPE_C: {
                 t_compound_cref compound(use_ref);
-                if (compound.get_value().empty())
+                if (compound.get_value().is_empty())
                   err = err::E_EMPTY;
               } break;
               case TYPE_A: {
@@ -1171,7 +1171,7 @@ namespace dacli
                 break;
               case TYPE_OS: {
                 t_simple_cref def_simple(def_ref);
-                if (!def_simple.get_value().empty()) {
+                if (!def_simple.get_value().is_empty()) {
                   auto max = get(use.get_size());
                   use.add_simple(err, def_ref.get_name(), def_simple.get_value(),
                                  t_oparams(true));
@@ -1183,7 +1183,7 @@ namespace dacli
               } break;
               case TYPE_OC: {
                 t_compound_cref def_compound(def_ref);
-                if (!def_compound.get_value().empty()) {
+                if (!def_compound.get_value().is_empty()) {
                   auto max = get(use.get_size());
                   use.add_compound(err, def_ref.get_name(),
                                    def_compound.get_part_values(),
@@ -1298,14 +1298,14 @@ namespace dacli
             case TYPE_S: {
               t_simple_cref def_simple(def_ref), use_simple(use_ref);
               if (!is_optional(def_type) &&
-                  !def_simple.get_value().empty() &&
+                  !def_simple.get_value().is_empty() &&
                    def_simple.get_value() != use_simple.get_value())
                 err = err::E_NO_MATCH;
             } break;
             case TYPE_OC:
             case TYPE_C: {
               t_compound_cref def_compound(def_ref);
-              const t_bool mandatory = !def_compound.get_value().empty() &&
+              const t_bool mandatory = !def_compound.get_value().is_empty() &&
                                        !is_optional(def_type);
               if (use_ref.get_type() == TYPE_S) {
                 t_simple_ref use_simple(use_ref);
@@ -1384,8 +1384,9 @@ namespace dacli
   namespace argn
   {
     t_bool check_empty(t_err err, t_word& word) {
+      /* XXX
       ERR_GUARD(err) {
-        if (!word.empty() &&
+        if (!word.is_empty() &&
             !(word.size() == 2 && word[0] == '<' && word[1] == '>')) {
           if (word[0] != '<') {
             word.insert(word.begin(), '<');
@@ -1397,6 +1398,7 @@ namespace dacli
         } else
           err = err::EMPTY;
       }
+      */
       return true;
     }
 
@@ -1480,15 +1482,15 @@ namespace dacli
 ////////////////////////////////////////////////////////////////////////////////
 
    t_void print(named::P_cstr_ prefix, const t_words& words) {
-      std::string str("[");
+      t_word word("[");
       auto max = words.size();
       for (decltype(max) i = 0; i < max; ++i) {
-        str += words[i];
+        word += words[i];
         if (i < max - 1)
-          str += ',';
+          word += ',';
       }
-      str += "]";
-      std::cout << prefix << str << std::endl;
+      word += "]";
+      std::cout << prefix << get(word.get_cstr()) << std::endl;
     }
 
     t_bool match(const argn::t_fullname& maybe, const argn::t_fullname& name,
@@ -2854,7 +2856,7 @@ namespace dacli
         t_type type = info.type_;
         if (base == TYPE_Z) {
           fullname.back() = name;
-          if (!parent.get_().second.info_.ext_.empty()) {
+          if (!parent.get_().second.info_.ext_.is_empty()) {
             fullname.back().erase(0, 1);
             fullname.back().insert(0, parent.get_().second.info_.ext_.get_cstr(),
                                    parent.get_().second.info_.ext_.length() -1);
@@ -3195,7 +3197,7 @@ namespace dacli
     t_ref t_argn::add_lookup_value_(t_err err, t_ref ref, t_name&& name) {
       t_lookup_ref lookup(err, ref);
       ERR_GUARD(err) {
-        if (!name.empty()) {
+        if (!name.is_empty()) {
           auto fullname = lookup.get_fullname();
           fullname.push_back(std::move(name));
           auto pair = table_.insert(t_arg(fullname, t_arginfo(TYPE_XI)));
