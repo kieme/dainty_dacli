@@ -206,13 +206,6 @@ namespace dacli
     using R_values   = t_prefix<t_values>::R_;
     using x_values   = t_prefix<t_values>::x_;
 
-    static const t_word     empty_word_v;
-    static const t_words    empty_words_v;
-    static const t_value    empty_value_v;
-    static const t_values   empty_values_v;
-    static const t_fullname empty_fullname_v;
-    static const t_name     empty_name_v;
-
     t_void print(P_cstr prefix, R_words);
 
     struct t_arginfo {
